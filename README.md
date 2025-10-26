@@ -1,0 +1,2 @@
+# rinpy
+Residue Interaction Network
