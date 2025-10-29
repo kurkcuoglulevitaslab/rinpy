@@ -1,8 +1,8 @@
 RINPY – Residue Interaction Network for 3D Protein Structures
 ======================================
 
-Description
------------
+📖 Description
+------------
 The **RINPY** is designed to predict allosteric sites in 3D protein structures
 by converting them into the network. In this network, each node represents a
 residue, where a residue composed of multiple atoms is simplified to a single
@@ -11,8 +11,8 @@ Each node is annotated with attributes such as Chain ID, Residue Number, Inserti
 3D coordinates (X, Y, Z). The edges between nodes are weighted based on the local
 interaction strength or affinity between residue atoms.
 
-Features
---------
+✨ Features
+-------------
 
 - Converts 3D protein structures to residue interaction networks (RINs)
 - Supports edge weighting based on the affinity
@@ -20,11 +20,11 @@ Features
 - Can be integrated with visualization tools such as PyMOL
 
 🖥️ RINPY GUI
-------------
+--------------
 You can download the standalone graphical user interface (GUI) version of **RINPY** from [here](YOUR_GOOGLE_DRIVE_LINK).
 
-Installation
-------------
+⚙️ Installation
+-----------------
 
 1. Clone the repository:
    git clone https://github.com/zehrasarica/rinpy.git
@@ -39,8 +39,8 @@ Installation
 4. Install dependencies:
    pip install -r requirements.txt
 
-Usage
------
+🚀 Usage
+---------
 You can run RINPY using the `RINProcess` class in your Python scripts:
 
 ```python
@@ -87,8 +87,8 @@ rin.start_process()
 
 ---------------------------------------------------------
 
-Notes
------
+📝 Notes
+----------
 RinPy requires output_path and only one of the following: input_path, pdb_ids, or trajectory_file. Providing multiple
 inputs is not allowed; if more than one is given, input_path will take precedence. Input processing order: input_path →
 pdb_ids → trajectory_file.
@@ -101,16 +101,17 @@ pdb_ids → trajectory_file.
 - **trajectory_file**: The MD trajectory file (pdb format) which contains multiple snaphots from MD.
 - **stride**: Default is **1**. This parameter is used in conjunction with trajectory_file parameter.
 
-Contributing
-------------
+🤝 Contributing
+-----------------
 Contributions, bug reports, and feature requests are welcome! Please follow
 standard GitHub workflow: fork → branch → pull request.
 
-License
--------
+🪪 License
+------------
 MIT License. See LICENSE file for details.
 
-## How to Cite
+📘How to Cite
+---------------
 
 If you use this repository, please cite this study as follows:
 
