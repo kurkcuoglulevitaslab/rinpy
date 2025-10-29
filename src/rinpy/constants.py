@@ -34,6 +34,7 @@ HYDROGEN_SYMBOL: str = 'H'
 PREPROCESS_SAVE_EXT: str = "_pre.pdb"
 WITH_HET_ATOM_SAVE_EXT: str = "_with_het_atom.pdb"
 
+RECORD_NAME: str = "record_name"
 ATOM_NUMBER: str = "atom_number"
 ATOM_NAME: str = "atom_name"
 CENTRALITY_SCORE: str = "centrality_score"
@@ -46,6 +47,7 @@ CHAIN_ID: str = "chain_id"
 INSERTION: str = "insertion"
 PDB_ID: str = "pdb_id"
 TWO_DECIMAL_FLOAT_FORMATTER: str = '{:.2f}'
+THREE_DECIMAL_FLOAT_FORMATTER: str = '{:.3f}'
 X_COORD: str = "x_coord"
 Y_COORD: str = "y_coord"
 Z_COORD: str = "z_coord"
