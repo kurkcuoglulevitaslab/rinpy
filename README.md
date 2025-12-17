@@ -44,7 +44,7 @@ You can download the standalone graphical user interface (GUI) version of **RINP
 You can run RINPY using the `RINProcess` class in your Python scripts:
 
 ```python
-from pyrin import RINProcess
+from rinpy import RINProcess
 
 # Define calculation options as a JSON-like dictionary
 calculation_options = {

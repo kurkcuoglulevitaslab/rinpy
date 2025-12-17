@@ -80,8 +80,9 @@ class CentralityPdbMapper:
     def process(self):
         logging.info(f'Centrality Hub analyses has been started...')
         base_file_path = os.path.join(self.destination_output_path, self.pdb_name)
-        columns = [ATOM_NUMBER, CENTRALITY_SCORE]
-        dtypes = {ATOM_NUMBER: int, CENTRALITY_SCORE: float}
+        columns = [ATOM_NUMBER, CENTRALITY_SCORE, RESIDUE_NAME, CHAIN_ID, RESIDUE_NUMBER, INSERTION]
+        dtypes = {ATOM_NUMBER: int, CENTRALITY_SCORE: float, RESIDUE_NAME: str, CHAIN_ID: str, RESIDUE_NUMBER: int,
+                  INSERTION: str}
         sort_keys = [ATOM_NUMBER]
 
         centrality_types = {

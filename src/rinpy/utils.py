@@ -7,7 +7,6 @@
 
 import logging
 import os
-import re
 import shutil
 from enum import Enum
 
@@ -143,16 +142,6 @@ def clear_existing_file(file_path=None):
         file_object.close()
 
 
-def read_text_file_to_list(input_file):
-    df_list = []
-    with open(input_file) as f:
-        for line in f:
-            line = line.strip()
-            columns = re.split('\s+', line, maxsplit=4)
-            df_list.append(columns)
-    return df_list
-
-
 def write_ppdb_to_pdb_file(ppdb, out_filename):
     ppdb.to_pdb(path=out_filename,
                 records=[PdbRecord.ATOM.name],
@@ -180,13 +169,24 @@ def convert_pdb_df_to_atom_ppdb(pdb_df):
     return ppdb
 
 
-def write_centrality_scores_to_file(filename_path=None, score_dict=None, formatter='%d %9.7f\n'):
+def write_centrality_scores_to_file(filename_path=None, score_dict=None, actual_residue_number_map=None,
+                                    float_formatter='%9.7f'):
     if score_dict is None:
         score_dict = dict()
     score_dict = dict(sorted(score_dict.items()))
     with open(filename_path, 'w') as f:
         for key, value in score_dict.items():
-            f.write(formatter % (key, value))
+            if actual_residue_number_map is not None:
+                chain_id, residue_number, insertion, residue_name = actual_residue_number_map[key]
+                if insertion:
+                    insertion_out = insertion
+                else:
+                    insertion_out = "''"
+                line_formatter = "%d " + float_formatter + " %s %s %d %s\n"
+                f.write(line_formatter % (key, value, residue_name, chain_id, residue_number, insertion_out))
+            else:
+                line_formatter = "%d " + float_formatter + "\n"
+                f.write(line_formatter % (key, value))
 
 
 def delete_folders_in_path(path):
@@ -237,7 +237,10 @@ def get_df(output_file_path=None, columns: list = None, dtypes: dict = None,
         raise ValueError(
             f"The following columns are not present in the dtype dictionary: {', '.join(missing_columns)}")
 
-    df = pd.DataFrame(read_text_file_to_list(output_file_path), columns=columns)
+    df = pd.read_csv(output_file_path,
+                     sep=r"\s+",
+                     engine="python",
+                     names=columns)
 
     for col, dtype in dtypes.items():
         if col in df.columns:

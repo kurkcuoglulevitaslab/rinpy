@@ -55,7 +55,10 @@ class ResidueGraphBuilder:
 
         remove_hydrogen: bool, default: False
             Remove the hydrogen atoms from the given PDB file.
-        """
+
+        num_workers: int, default: None The number of CPU cores will be used for the heavy atom-atom calculation.
+        If None, available CPU cores will be used.
+    """
 
     def __init__(self, pdb_name: str = None,
                  pdb_path: str = None,
@@ -63,7 +66,8 @@ class ResidueGraphBuilder:
                  cutoff: float = 4.5,
                  destination_output_path: str = None,
                  het_atom_list: list = None,
-                 remove_hydrogen: bool = True):
+                 remove_hydrogen: bool = True,
+                 num_workers=None):
         if destination_output_path is None:
             raise ValueError('You must provide an output path to proceed.')
         self.pdb_name = pdb_name
@@ -73,6 +77,9 @@ class ResidueGraphBuilder:
         self.ppdb = utils.get_ppdb(pdb_file_path=self.pdb_path)
         self.cutoff = cutoff
         logging.info(f"Cutoff: {self.cutoff}")
+        self.num_workers = num_workers
+        workers_msg = (str(self.num_workers) if self.num_workers is not None else "Detected CPU cores will be used.")
+        logging.info(f"CPU workers requested: {workers_msg}")
         self.destination_output_path = destination_output_path
         self.actual_residue_number_map = dict()
 
@@ -332,8 +339,11 @@ class ResidueGraphBuilder:
 
         total_residue_number = len(residue_number_list)
         index_pairs = [(i, j) for i in range(total_residue_number - 1) for j in range(i + 1, total_residue_number)]
-        logging.info(f"Available CPU count: {mp.cpu_count()}")
-        with mp.Pool(mp.cpu_count()) as pool:
+        cpu_count = mp.cpu_count()
+        if self.num_workers is not None:
+            cpu_count = self.num_workers
+        logging.info(f"CPU cores detected: {mp.cpu_count()} | CPU workers requested: {cpu_count}")
+        with mp.Pool(cpu_count) as pool:
             results = pool.starmap(self._calculate_affinity,
                                    [(index_pair, residue_number_list, residue_coord_dict) for index_pair in
                                     index_pairs])

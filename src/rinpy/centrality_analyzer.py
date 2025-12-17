@@ -368,7 +368,8 @@ class CentralityAnalyzer:
             scores_dict = nx.betweenness_centrality(G=self.graph, weight="weight")
             utils.write_centrality_scores_to_file(
                 filename_path=filename_path,
-                score_dict=scores_dict)
+                score_dict=scores_dict,
+                actual_residue_number_map=self.actual_residue_number_map)
 
             logging.info(f"{filename_path} has been saved to the disk!")
 
@@ -394,7 +395,8 @@ class CentralityAnalyzer:
             scores_dict = nx.closeness_centrality(G=self.graph, distance='weight')
             utils.write_centrality_scores_to_file(
                 filename_path=filename_path,
-                score_dict=scores_dict)
+                score_dict=scores_dict,
+                actual_residue_number_map=self.actual_residue_number_map)
 
             logging.info(f"{filename_path} has been saved to the disk!")
 
@@ -420,7 +422,8 @@ class CentralityAnalyzer:
             utils.write_centrality_scores_to_file(
                 filename_path=filename_path,
                 score_dict=scores_dict,
-                formatter='%d %8.5f\n')
+                actual_residue_number_map=self.actual_residue_number_map,
+                float_formatter='%8.5f')
 
             logging.info(f"{filename_path} has been saved to the disk!")
 

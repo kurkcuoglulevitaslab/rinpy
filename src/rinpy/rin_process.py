@@ -28,7 +28,7 @@ CLUSTER_NUMBER = 'cluster_number'
 class RINProcess:
 
     def __init__(self, output_path=None, input_path=None, pdb_ids=None, trajectory_file=None, stride=1,
-                 calculation_options=None, ligand_dict=None):
+                 calculation_options=None, ligand_dict=None, num_workers=None):
 
         self._validate_input_options(output_path=output_path,
                                      input_path=input_path,
@@ -41,6 +41,7 @@ class RINProcess:
         self.trajectory_file = trajectory_file
         self.stride = stride
         self.ligand_dict = ligand_dict
+        self.num_workers = num_workers
 
         self.calculation_options = calculation_options
 
@@ -137,7 +138,8 @@ class RINProcess:
                                   cutoff=cutoff_value,
                                   destination_output_path=destination_output_path,
                                   het_atom_list=het_atom_list,
-                                  remove_hydrogen=calculation_options[REMOVE_HYDROGEN][IS_CHECKED])
+                                  remove_hydrogen=calculation_options[REMOVE_HYDROGEN][IS_CHECKED],
+                                  num_workers=self.num_workers)
 
         rgb.calculate_contact()
 
@@ -400,6 +402,11 @@ def main():
                         help="Optional: Path to JSON file containing the ligand dictionary.",
                         default=None)
 
+    parser.add_argument("--num_workers",
+                        type=int,
+                        default=None,
+                        help="Number of CPU worker processes to use (default: use all detected CPU cores.)")
+
     args = parser.parse_args()
 
     ligand_dict = None
@@ -415,7 +422,8 @@ def main():
                      ligand_dict=ligand_dict,
                      calculation_options=calculation_options,
                      trajectory_file=args.trajectory_file,
-                     stride=args.stride)
+                     stride=args.stride,
+                     num_workers=args.num_workers)
 
     rin.start_process()
 
