@@ -1,4 +1,4 @@
-RINPY – Residue Interaction Network for 3D Protein Structures
+RinPy – Residue Interaction Network for 3D Protein Structures
 ======================================
 
 📖 Description
@@ -19,7 +19,7 @@ interaction strength or affinity between residue atoms.
 - Annotates nodes with chain, residue number, insertion code, and coordinates
 - Can be integrated with visualization tools such as PyMOL
 
-🖥️ RINPY GUI
+🖥️ RinPy GUI
 --------------
 You can download the standalone graphical user interface (GUI) version of **RinPy** from [here](YOUR_GOOGLE_DRIVE_LINK).
 
@@ -81,15 +81,23 @@ calculation_options = {
     },
     'betweenness': {
         'is_checked': True,
-        'value': 10
+        'value': 5
     },
     'closeness': {
-        'is_checked': False,
+        'is_checked': True,
         'value': 100
     },
     'degree': {
-        'is_checked': False,
+        'is_checked': True,
         'value': 100
+    },
+    'cluster_number': {
+        'is_checked': True,
+        'value': 3
+    },
+    'cutoff': {
+        'is_checked': True,
+        'value': 4.5
     }
 }
 
