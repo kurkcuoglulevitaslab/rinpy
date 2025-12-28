@@ -14,6 +14,7 @@ from pathlib import Path
 from rinpy import log_util, logging_config
 from rinpy.centrality_analyzer import CentralityAnalyzer
 from rinpy.centrality_pdb_mapper import CentralityPdbMapper
+from rinpy.font_utils import load_fonts_once
 from rinpy.hinge_analyzer import HingeAnalyzer
 from rinpy.log_util import *
 from rinpy.quantile_analyzer import QuantileAnalyzer
@@ -26,9 +27,14 @@ CLUSTER_NUMBER = 'cluster_number'
 
 
 class RINProcess:
+    _fonts_initialized = False
 
     def __init__(self, output_path=None, input_path=None, pdb_ids=None, trajectory_file=None, stride=1,
                  calculation_options=None, ligand_dict=None, num_workers=None):
+
+        if not RINProcess._fonts_initialized:
+            load_fonts_once()
+            RINProcess._fonts_initialized = True
 
         self._validate_input_options(output_path=output_path,
                                      input_path=input_path,
@@ -359,14 +365,14 @@ def _load_dict_file(file_path: Path):
         return None
 
 
-def main():
-    parser = argparse.ArgumentParser(description="RinPy input parser")
-
+def build_parser():
+    parser = argparse.ArgumentParser(
+        description="RinPy: Residue Interaction Network construction and analysis from protein structures and trajectories."
+    )
     parser.add_argument("--output_path",
                         type=str,
-                        help="Specify output path which will store the results",
+                        help="Specify output path which will store the results.",
                         required=True)
-
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
         "--input_path",
@@ -376,38 +382,38 @@ def main():
     group.add_argument(
         "--pdb_ids",
         type=str,
-        help="Load a PDB file from the Protein Data Bank via its unique 4-letter ID, e.g., '3t0t, 3t05, 3t07'"
+        help="Load a PDB file from the Protein Data Bank via its unique 4-letter ID, e.g., '6epl, 6epm, 6epn'"
     )
     group.add_argument(
         "--trajectory_file",
         type=str,
         help="Specify the trajectory file to be analyzed."
     )
-
     parser.add_argument("--stride",
                         type=int,
                         required=False,
                         help="Parsing the trajectory file every this stride number.",
                         default=1)
-
     parser.add_argument("--calculation_option_file",
                         type=Path,
                         required=True,
                         help="Required: Path to JSON file containing the calculation options in the dictionary.",
                         default=None)
-
     parser.add_argument("--ligand_dict_file",
                         type=Path,
                         required=False,
                         help="Optional: Path to JSON file containing the ligand dictionary.",
                         default=None)
-
     parser.add_argument("--num_workers",
                         type=int,
                         default=None,
                         help="Number of CPU worker processes to use (default: use all detected CPU cores.)")
-
     args = parser.parse_args()
+    return args
+
+
+def main():
+    args = build_parser()
 
     ligand_dict = None
 
