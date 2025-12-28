@@ -65,7 +65,7 @@ def log_with_stars(label: str):
     return decorator
 
 
-def log_elapsed_time1(msg, start, end):
+def log_elapsed_time_detail(msg, start, end):
     duration = end - start
     logging.info(f"{msg} is {duration:.2f} seconds.")
 
