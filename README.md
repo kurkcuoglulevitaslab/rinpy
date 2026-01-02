@@ -121,7 +121,7 @@ cd rinpy
 
 ```bash
 conda create -n rinpy_env python=3.10
-conda activate rinpy_env
+conda activate rinpy_env or source activate rinpy_env
 ```
 
 **Or using venv:**
