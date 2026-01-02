@@ -151,7 +151,7 @@ pip install .
 🚀 Usage
 ---------
 RinPy can be used programmatically via the **`RINProcess`** API within your Python scripts. Create a Python file
-named `main.py`, insert the content given below, and execute the script via the terminal or an equivalent environment.
+named **`main.py`**, insert the content given below, and execute the script via the terminal (python **`main.py`**) or an equivalent environment.
 
 ### Basic Example
 
