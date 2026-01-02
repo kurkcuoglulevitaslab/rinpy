@@ -28,7 +28,7 @@ with attributes such as Chain ID, Residue Number, Insertion Code, and its Cartes
 - Converts protein complexes to residue interaction networks (RINs).
 - Supports weighted edges based on the local interaction strength or affinity.
 - Annotates nodes with Chain ID, Residue Number, Insertion Code, and Cartesian coordinates.
-- Scalable and reproducible pipeline for single structures or large PDB ensembles
+- Scalable and reproducible pipeline for single structures or large PDB ensembles.
 - Can be integrated with molecular visualization system such as PyMOL.
 - Centrality analysis (betweenness, closeness, and degree) to identify key residues.
 - Detects the resides with high centrality scores using a user-defined quantile percentage.
