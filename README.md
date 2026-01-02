@@ -1,36 +1,44 @@
-RinPy – Residue Interaction Network for 3D Protein Structures
-======================================
+<div align="center">
+  <table border="0" cellpadding="0" cellspacing="0" style="border: none;">
+    <tr>
+      <td style="border: none; vertical-align: middle;">
+        <img src="assets/RinPy_128x128.png" alt="RinPy logo">
+      </td>
+      <td style="border: none; vertical-align: middle; padding-left: 25px;">
+        <h2 style="margin-top: -12px; margin-left: -40px">
+          RinPy – Residue Interaction Network for Protein Structures
+        </h2>
+      </td>
+    </tr>
+  </table>
+</div>
 
 📖 Description
 ------------
-The **RinPy** is designed to predict allosteric sites in 3D protein structures
-by converting them into the network. In this network, each node represents a
-residue, where a residue composed of multiple atoms is simplified to a single
-alpha carbon (CA) atom positioned at the average coordinates of all atoms in that residue.
-Each node is annotated with attributes such as Chain ID, Residue Number, Insertion Code, and its
-3D coordinates (X, Y, Z). The edges between nodes are weighted based on the local
-interaction strength or affinity between residue atoms.
+The **RinPy** is designed for constructing, visualizing, and analyzing Residue Interaction Networks (RINs). RIN describes a protein as a network of nodes interconnected by weighted edges. In this network, each node represents a residue, nucleotide or a ligand at the average coordinate of its atomic coordinates. The edge weight between two nodes is defined by the local interaction strength between the two residues. The average coordinates of the residues and/or nucleotides are placed at the Cα atom or P atom, respectively, for the protein-RNA/DNA complexes. Each node is annotated with attributes such as Chain ID, Residue Number, Insertion Code, and its Cartesian coordinates.
 
 ✨ Features
 -------------
 
-- Converts 3D protein structures to residue interaction networks (RINs)
-- Supports edge weighting based on the affinity
-- Annotates nodes with chain, residue number, insertion code, and coordinates
-- Can be integrated with visualization tools such as PyMOL
+- Converts protein complexes to residue interaction networks (RINs).
+- Supports weighted edges based on the local interaction strength or affinity.
+- Annotates nodes with Chain ID, Residue Number, Insertion Code, and Cartesian coordinates.
+- Can be integrated with molecular visualization system such as PyMOL.
 
 🖥️ RinPy GUI
 --------------
-You can download the standalone graphical user interface (GUI) version of **RinPy** from [here](YOUR_GOOGLE_DRIVE_LINK).
+You can download the standalone graphical user interface (GUI) version of **RinPy** from [here](https://drive.google.com/drive/folders/1GlLva31y7Ebpmpd8Dk6uQmGHCem2vWfO?usp=drive_link).
 
 ⚙️ Installation
 -----------------
+
 ### 📌 Prerequisites (Important)
 
 - **Python ≥ 3.10** is required.
 - RinPy depends on **NetworkX ≥ 3.4**, which requires Python 3.10 or newer.
 
-To ensure reliable management of the Python environment and scientific dependencies, we strongly recommend using **Miniconda** or **Anaconda**.
+To ensure reliable management of the Python environment and scientific dependencies, we strongly recommend using *
+*Miniconda** or **Anaconda**.
 
 - **Miniconda** (lightweight, recommended):  
   https://docs.conda.io/en/latest/miniconda.html
@@ -42,14 +50,37 @@ To ensure reliable management of the Python environment and scientific dependenc
 
 ### 🚀 Installation via PyPI (Recommended)
 
-RinPy is available on **PyPI** and can be installed directly using `pip`:
+RinPy is available on **PyPI** ([https://pypi.org/project/rinpy/](https://pypi.org/project/rinpy/)) and can be installed directly using **pip**.
+
+The following steps demonstrate how to create and activate a conda virtual environment, install RinPy, verify the installation, and run the program from the command line:
 
 ```bash
+# Create a conda virtual environment
+conda create -n rinpy_env python=3.10 -y
+
+# Activate the environment
+conda activate rinpy_env or source activate rinpy_env
+
+# Install RinPy
 pip install rinpy
+
+# Check installation
+rinpy --help
+
+# Run RinPy
+rinpy rinpy --input_path INPUT_PATH --output_path OUTPUT_PATH --calculation_option_file path/to/calculation_options.json
 ```
 
+#### Parameters from the terminal
+
+- `--input_path`: Input PDB file
+- `--output_path`: Output directory
+- `--calculation_option_file`: JSON file containing parameters. To download,  [calculation_options.json](https://github.com/zehrasarica/rinpy/tree/main/src/rinpy/calculation_options.json)
+
 ### 🔧 Installation from Source (Alternative)
+
 If you prefer to install RinPy from source, follow the steps below:
+
 1. Clone the repository:
    git clone https://github.com/zehrasarica/rinpy.git
 
@@ -58,8 +89,8 @@ If you prefer to install RinPy from source, follow the steps below:
 
 3. Create a Python virtual environment (optional but recommended):
    ```bash
-   conda create -n rinpy python=3.10
-   source activate rinpy or conda activate rinpy
+   conda create -n rinpy_env python=3.10
+   source activate rinpy_env or conda activate rinpy_env
 
 4. Install dependencies:
    pip install -r requirements.txt
@@ -116,7 +147,7 @@ calculation_options = {
 rin = RINProcess(
     input_path="path/to/input/files",
     output_path="path/to/output",
-    pdb_ids=None,  # list of PDB IDs to process if download from protein data bank such ["1ABC", "2DEF"].
+    pdb_ids=None,  # list of PDB IDs to process if download from protein data bank such ["4OBE", "4DSN"].
     ligand_dict=None,  # optional ligand information
     calculation_options=calculation_options,
     trajectory_file="path/to/input/files",
@@ -131,7 +162,7 @@ rin.start_process()
 
 📝 Notes
 ----------
-RinPy requires output_path and only one of the following: input_path, pdb_ids, or trajectory_file. Providing multiple
+**RinPy** requires output_path and only one of the following: input_path, pdb_ids, or trajectory_file. Providing multiple
 inputs is not allowed; if more than one is given, input_path will take precedence. Input processing order: input_path →
 pdb_ids → trajectory_file.
 
@@ -167,6 +198,7 @@ If you use this repository, please cite this study as follows:
   publisher={}
 }
 ```
+
 📬 Contact
 ------------
 For questions, contact: zehraacar559@gmail.com, sarica16@itu.edu.tr
