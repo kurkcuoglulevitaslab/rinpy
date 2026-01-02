@@ -29,8 +29,8 @@ def start_rinpy_test():
         },
     }
 
-    rinpy = RINProcess(input_path="kras_sos1_input",
-                       output_path="kras_sos1_output",
+    rinpy = RINProcess(input_path="kras_input",
+                       output_path="kras_output",
                        pdb_ids=None,
                        ligand_dict=None,
                        calculation_options=calculation_options,
