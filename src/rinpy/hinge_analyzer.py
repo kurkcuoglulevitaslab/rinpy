@@ -27,10 +27,27 @@ from rinpy.pymol_utils import PymolUtils
 from rinpy.style_config import FONT_STYLES, FONT_FAMILY, EDGE_COLOR, COLOR_PALETTE
 from rinpy.utils import CentralityType
 
-HINGE_MODES_DIR = "hinge_modes"
+_HINGE_MODES_DIR = "hinge_modes"
 
 
 class HingeAnalyzer:
+    """
+       Performing graph spectral analysis for the generated network of a protein structure to obtain hinge residues
+       of each mode (each eigenvector is referred to as a mode). The eigenvector is obtained from Laplacian matrix.
+
+       Parameters
+       ----------
+       graph
+           The protein structure represented as a network, where nodes are residues
+           and edges represent local strength interaction or affinity between residues.
+       pdb_name
+           The identifier of the PDB file being analyzed.
+       destination_output_path
+           The path where analysis results, plots, or output files will be saved.
+       actual_residue_number_map
+           contains defined parameters of a node, such as Chain ID, Residue Number and so on.
+    """
+
     def __init__(self, graph, pdb_name, destination_output_path, actual_residue_number_map):
         self.graph = graph
         self.pdb_name = pdb_name
@@ -42,7 +59,7 @@ class HingeAnalyzer:
                                       destination_output_path=destination_output_path,
                                       actual_residue_number_map=actual_residue_number_map)
 
-        utils.create_folder_not_exists(self.destination_output_path / self.pdb_name / HINGE_MODES_DIR)
+        utils.create_folder_not_exists(self.destination_output_path / self.pdb_name / _HINGE_MODES_DIR)
 
     def compute_laplacian_modes(self, num_modes):
         nodes = sorted(self.graph.nodes())
@@ -76,7 +93,7 @@ class HingeAnalyzer:
         return sorted(hinge_residues)
 
     def save_and_plot_mode_to_file(self, mode_data, mode_name, hinge_residues):
-        mode_output_path = os.path.join(self.destination_output_path, self.pdb_name, HINGE_MODES_DIR)
+        mode_output_path = os.path.join(self.destination_output_path, self.pdb_name, _HINGE_MODES_DIR)
         utils.create_folder_not_exists(mode_output_path)
         nodes = self.graph.nodes()
         actual_hinge_residues_tuple = self.get_actual_hinge_residues_tuple(nodes=nodes,
@@ -140,7 +157,7 @@ class HingeAnalyzer:
         filtered_data_df.insert(0, "Residue Number", residue_ids)
         filtered_data_df.insert(1, "Chain Id", chain_ids)
 
-        filtered_data_path = self.destination_output_path / self.pdb_name / HINGE_MODES_DIR / f'{self.pdb_name}_eigenvectors{CSV_EXT}'
+        filtered_data_path = self.destination_output_path / self.pdb_name / _HINGE_MODES_DIR / f'{self.pdb_name}_eigenvectors{CSV_EXT}'
         filtered_data_df.to_csv(filtered_data_path, index=False)
 
     def compute_hinge_residues_with_sign(self, num_modes=None):
@@ -163,12 +180,12 @@ class HingeAnalyzer:
 
                 node_ids = sorted(list(self.graph.nodes()))
                 cluster_labels = {node_ids[i]: int(mode_data[i]) for i in range(len(node_ids))}
-                full_path = os.path.join(self.destination_output_path, self.pdb_name, HINGE_MODES_DIR,
+                full_path = os.path.join(self.destination_output_path, self.pdb_name, _HINGE_MODES_DIR,
                                          f'{self.pdb_name}_laplacian_mode_{(i + 1)}_hinge_interactive_clusters_3d{HTML_EXT}')
                 self.plot_graph_interactive_clusters_3d(self.graph, cluster_labels, hinge_residues, full_path)
                 start = time.time()
 
-                p = os.path.join(self.destination_output_path, self.pdb_name, HINGE_MODES_DIR,
+                p = os.path.join(self.destination_output_path, self.pdb_name, _HINGE_MODES_DIR,
                                  f"{self.pdb_name}_laplacian_mode_{(i + 1)}_graph_clusters_2d{PNG_EXT}")
                 self.plot_graph_clusters_2d(self.graph, cluster_labels, hinge_residues, full_path=p)
                 log_util.log_elapsed_time_detail("plot_graph_clusters_2d: ", start, time.time())

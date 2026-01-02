@@ -97,83 +97,131 @@ rinpy rinpy --input_path INPUT_PATH --output_path OUTPUT_PATH --calculation_opti
 
 If you prefer to install RinPy from source, follow the steps below:
 
-1. Clone the repository:
-   git clone https://github.com/zehrasarica/rinpy.git
+1. **Clone the repository:**
 
-2. Navigate to the project folder:
-   cd rinpy
+```bash
+git clone https://github.com/zehrasarica/rinpy.git
+```
 
-3. Create a Python virtual environment (optional but recommended):
-   ```bash
-   conda create -n rinpy_env python=3.10
-   source activate rinpy_env or conda activate rinpy_env
+2. **Make scripts executable (macOS/Linux only):**
 
-4. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
+```bash
+chmod -R +x rinpy
+```
+
+3. **Navigate to the project folder:**
+
+```bash
+cd rinpy
+```
+
+4. **Create a Python virtual environment (strongly recommended):**
+
+**Using conda:**
+
+```bash
+conda create -n rinpy_env python=3.10
+conda activate rinpy_env
+```
+
+**Or using venv:**
+
+```bash
+python -m venv rinpy_env
+
+# Activate the virtual environment
+# On Windows:
+rinpy_env\Scripts\activate
+# On macOS/Linux:
+source rinpy_env/bin/activate
+```
+5. **Install the package:**
+
+- **Editable (recommended):**
+
+```bash
+pip install -e .
+```
+- **Non-editable:**
+
+```bash
+pip install .
+```
 
 🚀 Usage
 ---------
-RinPy can be used programmatically via the `RINProcess` API within your Python scripts. Create a Python file
+RinPy can be used programmatically via the **`RINProcess`** API within your Python scripts. Create a Python file
 named `main.py`, insert the content given below, and execute the script via the terminal or an equivalent environment.
 
 ### Basic Example
 
+RinPy uses Python's **`multiprocessing`** module.
+
+When running RinPy from a script on macOS or Windows, make sure your entry point is protected:
+
 ```python
+from multiprocessing import freeze_support
 from rinpy import RINProcess
 
-# Define calculation options as a JSON-like dictionary
-calculation_options = {
-    'remove_hydrogen': {
-        'is_checked': True,
-        'value': 0
-    },
-    'betweenness': {
-        'is_checked': True,
-        'value': 5
-    },
-    'closeness': {
-        'is_checked': True,
-        'value': 100
-    },
-    'degree': {
-        'is_checked': True,
-        'value': 100
-    },
-    'cluster_number': {
-        'is_checked': True,
-        'value': 3
-    },
-    'cutoff': {
-        'is_checked': True,
-        'value': 4.5
+
+def main():
+    # Define calculation options as a JSON-like dictionary
+    calculation_options = {
+        'remove_hydrogen': {
+            'is_checked': True,
+            'value': 0
+        },
+        'betweenness': {
+            'is_checked': True,
+            'value': 5
+        },
+        'closeness': {
+            'is_checked': True,
+            'value': 100
+        },
+        'degree': {
+            'is_checked': True,
+            'value': 100
+        },
+        'cluster_number': {
+            'is_checked': True,
+            'value': 3
+        },
+        'cutoff': {
+            'is_checked': True,
+            'value': 4.5
+        }
     }
-}
 
-# Initialize RINProcess, 
-#
-# output_path is mandatory.
-# For input, provide ONLY ONE of the following:
-#   - input_path
-#   - pdb_ids
-#   - trajectory_file
-# The system checks inputs in the following order:
-# input_path → pdb_ids → trajectory_file
-#
-# If using pdb_ids, set input_path and trajectory_file to None.
+    # Initialize RINProcess, 
+    #
+    # output_path is mandatory.
+    # For input, provide ONLY ONE of the following:
+    #   - input_path
+    #   - pdb_ids
+    #   - trajectory_file
+    # The system checks inputs in the following order:
+    # input_path → pdb_ids → trajectory_file
+    #
+    # If using pdb_ids, set input_path and trajectory_file to None.
 
-rin = RINProcess(
-    input_path="path/to/input/files",
-    output_path="path/to/output",
-    pdb_ids=None,  # list of PDB IDs to process if download from protein data bank such ["4OBE", "4DSN"].
-    ligand_dict=None,  # optional ligand information
-    calculation_options=calculation_options,
-    trajectory_file="path/to/input/files",
-    stride=1  # The default is 1. This parameter is used in conjunction with trajectory_file.
-)
+    rin = RINProcess(
+        input_path="path/to/input/files",
+        output_path="path/to/output",
+        pdb_ids=None,  # list of PDB IDs to process if download from protein data bank such ["4OBE", "4DSN"].
+        ligand_dict=None,  # optional ligand information
+        calculation_options=calculation_options,
+        trajectory_file=None,  # "path/to/input/files"
+        stride=1  # The default is 1. This parameter is used in conjunction with trajectory_file.
+    )
 
-# Start the process
-rin.start_process()
+    # Start the process
+    rin.start_process()
+
+
+if __name__ == "__main__":
+    freeze_support()
+    main()
 ```
 
 ---------------------------------------------------------
@@ -195,12 +243,15 @@ pdb_ids → trajectory_file.
 
 ## 📊 Case Study of RinPy
 
-After setting up a Conda virtual environment and installing **RinPy**, navigate to the **`tests`** folder. It contains two
+After setting up a Conda virtual environment and installing **RinPy**, navigate to the **`tests`** folder. It contains
+two
 Python scripts and their corresponding `.sh` files for running the analyses.
-The **`kras_sos1_input`** folder contains KRAS–SOS1 PDB files, whereas **`kras_input`** includes KRAS PDB structures used in the
+The **`kras_sos1_input`** folder contains KRAS–SOS1 PDB files, whereas **`kras_input`** includes KRAS PDB structures
+used in the
 case study.
 
-To analyze the MD trajectory PDB files, download the dataset from [here](https://drive.google.com/file/d/1COAZqgiCGVhkYvCI6DQLv2YzJ5emcvRN/view?usp=drive_link).
+To analyze the MD trajectory PDB files, download the dataset
+from [here](https://drive.google.com/file/d/1COAZqgiCGVhkYvCI6DQLv2YzJ5emcvRN/view?usp=drive_link).
 You may update the existing a Python script and its corresponding `.sh` file under `tests` directory.
 
 📄 License

@@ -21,11 +21,47 @@ from rinpy.residue_network_builder import ResidueNetworkBuilder
 from rinpy.trajectory import Trajectory
 from rinpy.utils import *
 
-PDB_ID_LENGTH = 4
-CLUSTER_NUMBER = 'cluster_number'
+_PDB_ID_LENGTH = 4
+_CLUSTER_NUMBER = 'cluster_number'
 
 
 class RINProcess:
+    """
+        RINProcess is entry module of the RinPy package to manage the entire process step by step.
+
+        Attributes:
+        -----------
+        _fonts_initialized : bool
+            Class-level flag to indicate whether fonts for plotting have been initialized.
+
+        Parameters:
+        -----------
+        output_path : str
+            Path where the results, plots, or processed files will be saved.
+
+        input_path : str
+            Path to the input PDB files.
+
+        pdb_ids : list of str
+            List of PDB IDs to be processed.
+
+        trajectory_file : str,
+            Path to a single PDB which contains multiple PDB from a molecular dynamics (MD) trajectory file.
+
+        stride : int, default=1
+            The step size for processing frames from a PDB file which contains MD snapshots.
+            For example, stride=10 means every 10th frame will be processed.
+
+        calculation_options : dict
+            A dictionary containing calculation parameters such as distance cutoffs, or other options for RIN generation.
+
+        ligand_dict : dict
+            Dictionary containing hetero atoms to be included in the generated network.
+
+        num_workers : int,
+            Number of parallel workers to use for multiprocessing computations. Default is detected from the system.
+    """
+
     _fonts_initialized = False
 
     def __init__(self, output_path=None, input_path=None, pdb_ids=None, trajectory_file=None, stride=1,
@@ -96,7 +132,7 @@ class RINProcess:
         fetched_pdb_files = []
         output_path_pdb_ids = []
         for pdb_id in pdb_ids:
-            if len(pdb_id) == PDB_ID_LENGTH:
+            if len(pdb_id) == _PDB_ID_LENGTH:
                 destination_path = os.path.join(output_path, pdb_id)
                 create_folder_not_exists(destination_path)
                 pdb_id_file = os.path.join(str(destination_path), pdb_id + PDB_EXT)
@@ -177,8 +213,8 @@ class RINProcess:
                            destination_output_path=destination_output_path,
                            actual_residue_number_map=actual_residue_number_map)
         nums_cluster = None
-        if CLUSTER_NUMBER in calculation_options and calculation_options[CLUSTER_NUMBER][IS_CHECKED]:
-            nums_cluster = calculation_options[CLUSTER_NUMBER][VALUE]
+        if _CLUSTER_NUMBER in calculation_options and calculation_options[_CLUSTER_NUMBER][IS_CHECKED]:
+            nums_cluster = calculation_options[_CLUSTER_NUMBER][VALUE]
         hc.compute_hinge_residues_with_sign(num_modes=nums_cluster)
         return hc
 

@@ -28,7 +28,7 @@ AFFINITY = 'affinity'
 class ResidueNetworkBuilder:
     """ The Residue Network Builder module generates output data for constructing residue interaction networks based on
         affinity calculations between α-carbon atoms. It computes atom-to-atom distances between source and target
-        residues to identify potential interactions.
+        residues.
 
         Attributes
         ----------
@@ -39,7 +39,7 @@ class ResidueNetworkBuilder:
             Location of the PDB file that will be used for contact calculation (path/to/4OBE.pdb).
 
         use_preprocess : bool, default: False
-            Whether to preprocess the PDB before analysis. The given PDB file contains additional information
+            Whether to preprocess the PDB before analysis. The given PDB file contains information
             such as {'ATOM', 'HETATM', 'ANISOU', 'OTHERS'}.If this is True, then only ATOM records from
             the PDB file will be extracted as preprocess and will be saved as 4OBE_pre.pdb in the given output of 4OBE.
 
