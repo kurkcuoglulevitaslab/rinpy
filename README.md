@@ -28,13 +28,13 @@ with attributes such as Chain ID, Residue Number, Insertion Code, and its Cartes
 - Converts protein complexes to residue interaction networks (RINs).
 - Supports weighted edges based on the local interaction strength or affinity.
 - Annotates nodes with Chain ID, Residue Number, Insertion Code, and Cartesian coordinates.
-- Scalable and reproducible pipeline for single structures or large PDB ensembles.
+- Scalable and reproducible pipeline for single structures, large PDB ensembles, and PDBs from a MD trajectory.
 - Cross-platform: compatible with Windows, macOS, and Linux.
 - Can be integrated with molecular visualization system such as PyMOL.
 - Centrality analysis (betweenness, closeness, and degree) to identify key residues.
 - Detects the resides with high centrality scores using a user-defined quantile percentage.
 - Frequency of common hub residues across PDB datasets.
-- Graph spectral graph analysis to identify hinge residues and dynamically connected domains.
+- Graph spectral analysis to identify hinge residues and dynamically connected domains.
 - Interactive 2D heatmap visualizations for each centrality metrics, residue frequencies, spectral domains and more.
 - Interactive 3D heatmap visualizations for graph spectral domains within protein structures.
 
@@ -109,6 +109,7 @@ If you prefer to install RinPy from source, follow the steps below:
    source activate rinpy_env or conda activate rinpy_env
 
 4. Install dependencies:
+   ```bash
    pip install -r requirements.txt
 
 🚀 Usage
