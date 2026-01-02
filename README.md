@@ -15,7 +15,7 @@
 
 📖 Description
 ------------
-The **RinPy** is designed for constructing, visualizing, and analyzing Residue Interaction Networks (RINs). RIN
+**RinPy** is designed for constructing, visualizing, and analyzing Residue Interaction Networks (RINs). RIN
 describes a protein as a network of nodes interconnected by weighted edges. In this network, each node represents a
 residue, nucleotide or a ligand at the average coordinate of its atomic coordinates. The edge weight between two nodes
 is defined by the local interaction strength between the two residues. The average coordinates of the residues and/or
