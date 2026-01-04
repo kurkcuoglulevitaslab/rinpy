@@ -99,8 +99,15 @@ If you prefer to install RinPy from source, follow the steps below:
 
 1. **Clone the repository:**
 
+Replace `<username>` with GitHub username:
+
+**Using HTTPS:**
 ```bash
-git clone https://github.com/zehrasarica/rinpy.git
+git clone https://github.com/<username>/rinpy.git
+```
+**Using SSH (requires GitHub SSH keys):**
+```bash
+git clone git@github.com:<username>/rinpy.git
 ```
 
 2. **Make scripts executable (macOS/Linux only):**
