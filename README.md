@@ -40,8 +40,8 @@ with attributes such as Chain ID, Residue Number, Insertion Code, and its Cartes
 
 🖥️ RinPy GUI
 --------------
-You can download the standalone graphical user interface (GUI) version of **RinPy**
-from [here](https://drive.google.com/drive/folders/1GlLva31y7Ebpmpd8Dk6uQmGHCem2vWfO?usp=drive_link).
+You can download the standalone graphical user interface (GUI) of **RinPy**
+from [here](https://drive.google.com/drive/folders/1GlLva31y7Ebpmpd8Dk6uQmGHCem2vWfO?usp=drive_link). You can download the RinPy GUI application [**User Manual**](https://github.com/zehrasarica/rinpy/blob/main/assets/RinPy_GUI_User_Manual.pdf). 
 
 ⚙️ Installation
 -----------------
