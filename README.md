@@ -41,7 +41,7 @@ with attributes such as Chain ID, Residue Number, Insertion Code, and its Cartes
 🖥️ RinPy GUI
 --------------
 You can download the standalone graphical user interface (GUI) of **RinPy**
-from [**here**](https://drive.google.com/drive/folders/1GlLva31y7Ebpmpd8Dk6uQmGHCem2vWfO?usp=drive_link). You can download the RinPy GUI application [**User Manual**](https://github.com/zehrasarica/rinpy/blob/main/assets/RinPy_GUI_User_Manual.pdf). Additionally, the User Manual can be accessed directly within **the RinPy GUI Application** by clicking the **Help menu** and selecting **User Manual**.
+from [**here**](https://drive.google.com/drive/folders/1GlLva31y7Ebpmpd8Dk6uQmGHCem2vWfO?usp=drive_link). You can download the RinPy GUI application [**User Manual**](./assets/RinPy_GUI_User_Manual.pdf). Additionally, the User Manual can be accessed directly within **the RinPy GUI Application** by clicking the **Help menu** and selecting **User Manual**.
 
 ⚙️ Installation
 -----------------
@@ -91,7 +91,7 @@ rinpy rinpy --input_path INPUT_PATH --output_path OUTPUT_PATH --calculation_opti
 - `--input_path`: Input directory including PDB files
 - `--output_path`: Output directory
 - `--calculation_option_file`: JSON file containing parameters. To download,
-  click [calculation_options.json](https://github.com/zehrasarica/rinpy/tree/main/src/rinpy/calculation_options.json).
+  click [calculation_options.json](./src/rinpy/calculation_options.json).
 
 ### 🔧 Installation from Source (Alternative)
 
