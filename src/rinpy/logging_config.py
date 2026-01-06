@@ -74,7 +74,7 @@ def save_logs(output_dir: str):
     """ Save .rinpy/process.log to the given output directory as log.txt.
     If .rinpy/process.log does not exist, log a warning.
     """
-    process_log_file = log_dir / PROCESS_LOG  # .rin/process.log path
+    process_log_file = log_dir / PROCESS_LOG  # .rinpy/process.log path
 
     try:
         if not process_log_file.exists():

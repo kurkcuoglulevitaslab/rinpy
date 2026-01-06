@@ -36,7 +36,7 @@ with attributes such as Chain ID, Residue Number, Insertion Code, and its Cartes
 - Frequency of common hub residues across PDB datasets.
 - Graph spectral analysis to identify hinge residues and dynamically connected domains.
 - Interactive 2D heatmap visualizations for each centrality metrics, residue frequencies, spectral domains and more.
-- Interactive 3D heatmap visualizations for graph spectral domains within protein structures.
+- Interactive 3D visualizations of graph spectral clustering for protein structures.
 
 🖥️ RinPy GUI
 --------------
