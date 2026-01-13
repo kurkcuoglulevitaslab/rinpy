@@ -15,7 +15,7 @@
 
 📖 Description
 ------------
-**RinPy** is designed for constructing, visualizing, and analyzing Residue Interaction Networks (RINs). RIN
+**RinPy**, a pip-installable Python package. **RinPy** is designed for constructing, visualizing, and analyzing Residue Interaction Networks (RINs). RIN
 describes a protein as a network of nodes interconnected by weighted edges. In this network, each node represents a
 residue, nucleotide or a ligand at the average coordinate of its atomic coordinates. The edge weight between two nodes
 is defined by the local interaction strength between the two residues. The average coordinates of the residues and/or
@@ -40,8 +40,7 @@ with attributes such as Chain ID, Residue Number, Insertion Code, and its Cartes
 
 🖥️ RinPy GUI
 --------------
-You can download the standalone graphical user interface (GUI) of **RinPy**
-from [**here**](https://drive.google.com/drive/folders/1GlLva31y7Ebpmpd8Dk6uQmGHCem2vWfO?usp=drive_link). You can download the RinPy GUI application [**User Manual**](./assets/RinPy_GUI_User_Manual.pdf). Additionally, the User Manual can be accessed directly within **the RinPy GUI Application** by clicking the **Help menu** and selecting **User Manual**.
+To facilitate ease of use, the RinPy Graphical User Interface (GUI) was developed as a companion to this package for the scientific community. The standalone RinPy GUI can be downloaded from [**here**](https://drive.google.com/drive/folders/1GlLva31y7Ebpmpd8Dk6uQmGHCem2vWfO?usp=drive_link), and the **User Manual** is available [**User Manual**](./assets/RinPy_GUI_User_Manual.pdf). Additionally, the User Manual can be accessed directly within the RinPy GUI application via **Help** > **User Manual**.
 
 ⚙️ Installation
 -----------------
@@ -83,7 +82,7 @@ pip install rinpy
 rinpy --help
 
 # Run RinPy
-rinpy rinpy --input_path INPUT_PATH --output_path OUTPUT_PATH --calculation_option_file path/to/calculation_options.json
+python rinpy --input_path INPUT_PATH --output_path OUTPUT_PATH --calculation_option_file path/to/calculation_options.json
 ```
 
 #### Parameters from the terminal
