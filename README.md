@@ -82,7 +82,12 @@ pip install rinpy
 rinpy --help
 
 # Run RinPy
-python rinpy --input_path INPUT_PATH --output_path OUTPUT_PATH --calculation_option_file path/to/calculation_options.json
+python -m rinpy --input_path INPUT_PATH --output_path OUTPUT_PATH --calculation_option_file path/to/calculation_options.json
+
+or 
+
+rinpy --input_path INPUT_PATH --output_path OUTPUT_PATH --calculation_option_file path/to/calculation_options.json
+
 ```
 
 #### Parameters from the terminal
