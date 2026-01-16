@@ -128,7 +128,7 @@ cd rinpy
 
 4. **Create a Python virtual environment (strongly recommended):**
 
-**Using conda:**
+**Using conda (strongly recommended):**
 
 ```bash
 conda create -n rinpy_env python=3.10
