@@ -14,7 +14,7 @@ import numpy as np
 import plotly.graph_objects as go
 import seaborn as sns
 from matplotlib import ticker
-from scipy.sparse.linalg import eigs
+from scipy.sparse.linalg import eigsh
 
 from rinpy import utils
 from rinpy.constants import CHAIN_ID, RESIDUE_NAME
@@ -187,11 +187,13 @@ class GraphPlotter:
 
         fig.write_html(full_path)
 
-    def plot_graph_2d_degree(self, graph, filename="degree_graph", title=None, node_circle_size=80, equal_axis=False):
+    def plot_graph_2d_degree(self, graph, filename="degree_graph", title=None, node_circle_size=80, equal_axis=False,
+                             font_size=6, font_color='white'):
 
         full_path = self.get_full_save_path(filename=filename, extension="png")
-        laplacian = nx.laplacian_matrix(graph).todense()
-        eigenvalues, eigenvectors = eigs(laplacian, k=4, which='SM')
+        nodes = sorted(graph.nodes())
+        laplacian = nx.laplacian_matrix(graph, nodelist=nodes).astype(float)
+        eigenvalues, eigenvectors = eigsh(laplacian, k=4, which="SM")
         w = eigenvectors[:, 0].real
         pos = {residue_index: (graph.nodes[residue_index]['x'], graph.nodes[residue_index]['y']) for residue_index in
                graph.nodes}
@@ -202,6 +204,11 @@ class GraphPlotter:
                                pos,
                                node_color=node_color,
                                node_size=node_circle_size)
+        nx.draw_networkx_labels(graph,
+                                pos,
+                                labels={n: str(n) for n in graph.nodes()},
+                                font_color=font_color,
+                                font_size=font_size)
         nx.draw_networkx_edges(graph,
                                pos,
                                edge_color=EDGE_COLOR,
@@ -225,7 +232,7 @@ class GraphPlotter:
         plt.close()
 
     def plot_graph_2d_degree_with_coords(self, graph, filename="degree_coords_graph", cmap='jet', title=None,
-                                         equal_axis=False):
+                                         equal_axis=False, font_size=6, font_color='black'):
         full_path = self.get_full_save_path(filename=filename, extension="png")
         pos = {n: (graph.nodes[n]['x'], graph.nodes[n]['y']) for n in graph.nodes}
 
@@ -242,7 +249,11 @@ class GraphPlotter:
                                        cmap=cmap,
                                        node_color=node_colors,
                                        node_size=node_sizes)
-
+        nx.draw_networkx_labels(graph,
+                                pos,
+                                labels={n: str(n) for n in graph.nodes()},
+                                font_color=font_color,
+                                font_size=font_size)
         nx.draw_networkx_edges(graph,
                                pos,
                                edge_color=EDGE_COLOR,

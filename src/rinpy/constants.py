@@ -44,6 +44,7 @@ MODE: str = "mode"
 RESIDUE_NAME: str = "residue_name"
 CHAIN_ID: str = "chain_id"
 INSERTION: str = "insertion"
+SEGMENT_ID: str = "segment_id"
 PDB_ID: str = "pdb_id"
 TWO_DECIMAL_FLOAT_FORMATTER: str = '{:.2f}'
 THREE_DECIMAL_FLOAT_FORMATTER: str = '{:.3f}'
@@ -58,6 +59,7 @@ P_ATOM_NAME: str = "P"
 STAR_PRINT_COUNT: int = 30
 
 PDB_EXT: str = ".pdb"
+ENT_EXT: str = ".ent"
 EXCEL_EXT: str = ".xlsx"
 CSV_EXT: str = ".csv"
 TXT_EXT: str = ".txt"
@@ -66,6 +68,8 @@ PML_EXT: str = ".pml"
 PNG_EXT: str = ".png"
 
 DEFAULT_CUTOFF: float = 4.5
+
+ATOM: str = "ATOM"
 
 CALCULATION_OPTION_DEFAULT_JSON_PATH: str = 'calculation_options.json'
 

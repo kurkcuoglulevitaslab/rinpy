@@ -541,7 +541,12 @@ class CentralityAnalyzer:
         if missing_residues:
             logging.warning(f"Skipped {missing_residues} residues due to missing metadata.")
 
-        self.graph.add_weighted_edges_from(zip(sources, targets, weights))
+        valid_edges = [
+            (u, v, w) for u, v, w in zip(sources, targets, weights)
+            if u in self.graph and v in self.graph
+        ]
+
+        self.graph.add_weighted_edges_from(valid_edges)
 
         self.number_of_nodes = self.graph.number_of_nodes()
 
