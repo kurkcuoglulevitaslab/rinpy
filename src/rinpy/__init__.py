@@ -14,11 +14,12 @@
 # 'X.Y.dev0' is the canonical version of 'X.Y.dev'
 #
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 __author__ = "Zehra Sarica <zehraacar559@gmail.com, sarica16@itu.edu.tr>"
 
 import rinpy.logging_config
 
 from rinpy.rin_process import RINProcess
+from rinpy.network_comparator import NetworkComparator
 
-__all__ = ["RINProcess"]
+__all__ = ["RINProcess", "NetworkComparator"]
