@@ -36,7 +36,6 @@ dependencies = [
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Operating System :: Microsoft :: Windows",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: MacOS",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
