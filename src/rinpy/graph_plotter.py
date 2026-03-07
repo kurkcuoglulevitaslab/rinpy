@@ -17,7 +17,7 @@ from matplotlib import ticker
 from scipy.sparse.linalg import eigsh
 
 from rinpy import utils
-from rinpy.constants import CHAIN_ID, RESIDUE_NAME
+from rinpy.constants import CHAIN_ID, RESIDUE_NAME, SEGMENT_ID
 from rinpy.style_config import FONT_STYLES, FONT_FAMILY, EDGE_COLOR, COLOR_PALETTE
 
 X_COORD_LABEL = "X Coordinate"
@@ -147,16 +147,27 @@ class GraphPlotter:
             node_x = [graph.nodes[node_id]['x'] for node_id in node_ids]
             node_y = [graph.nodes[node_id]['y'] for node_id in node_ids]
             node_z = [graph.nodes[node_id]['z'] for node_id in node_ids]
-            hovertext = [
-                (f"Chain: {graph.nodes[node_id][CHAIN_ID]}<br>"
-                 f"Residue Number: {utils.get_residue_id(graph.nodes[node_id])}<br>"
-                 f"Residue Name: {graph.nodes[node_id][RESIDUE_NAME]}<br>"
-                 f"X: {graph.nodes[node_id]['x']:.3f}<br>"
-                 f"Y: {graph.nodes[node_id]['y']:.3f}<br>Z: {graph.nodes[node_id]['z']:.3f}")
-                for node_id in node_ids
-            ]
+            hovertext = []
+            labels = []
+            for node_id in node_ids:
+                node = graph.nodes[node_id]
+                seg_text = f"Segment ID: {node[SEGMENT_ID]}<br>" if node[SEGMENT_ID] not in ['', "''", None] else ''
+                text = (
+                    f"Chain: {node[CHAIN_ID]}<br>"
+                    f"Residue Number: {utils.get_residue_id(node)}<br>"
+                    f"Residue Name: {node[RESIDUE_NAME]}<br>"
+                    f"{seg_text}"
+                    f"X: {node['x']:.3f}<br>"
+                    f"Y: {node['y']:.3f}<br>"
+                    f"Z: {node['z']:.3f}"
+                )
+                hovertext.append(text)
 
-            labels = [utils.get_residue_id(graph.nodes[n]) for n in node_ids]
+                res_id = utils.get_residue_id(node)
+                seg_id = node.get(SEGMENT_ID)
+                if seg_id not in [None, '', "''"]:
+                    res_id = f"{res_id} ({seg_id})"
+                labels.append(res_id)
 
             trace = go.Scatter3d(
                 x=node_x, y=node_y, z=node_z,
@@ -168,7 +179,10 @@ class GraphPlotter:
                 hovertext=hovertext,
                 name=f"Chain {chain_id}",
                 legendgroup=f"Chain {chain_id}",
-                showlegend=True
+                showlegend=True,
+                hoverlabel=dict(
+                    font=dict(color='white')
+                )
             )
             node_traces.append(trace)
 
@@ -182,7 +196,8 @@ class GraphPlotter:
                 yaxis=dict(title=Y_COORD_LABEL),
                 zaxis=dict(title=Z_COORD_LABEL),
                 aspectmode='data'
-            )
+            ),
+            template='plotly'
         )
 
         fig.write_html(full_path)
@@ -316,7 +331,7 @@ class GraphPlotter:
             visible_x_ticks.append(max(keys))
 
         xtick_labels = [
-            f"{i} ({self.actual_residue_number_map[i][0]}, {utils.get_residue_id_by_tuple(self.actual_residue_number_map[i])})"
+            f"{i} ({self.actual_residue_number_map[i][1]}, {utils.get_residue_id_by_tuple(self.actual_residue_number_map[i])})"
             if i in self.actual_residue_number_map else i
             for i in visible_x_ticks
         ]
@@ -324,7 +339,15 @@ class GraphPlotter:
                    fontname=FONT_FAMILY)
         plt.yticks(fontsize=FONT_STYLES['ytick']['labelsize'], fontname=FONT_FAMILY)
 
-        plt.xlabel('Residue Index (Chain Id, Residue Number)', fontdict=FONT_STYLES["xlabel"])
+        has_any_seg_id = any(
+            seg_id not in [None, '', "''"]
+            for res_info in self.actual_residue_number_map.values()
+            for _, _, _, _, seg_id, _ in [res_info]
+        )
+        if has_any_seg_id:
+            plt.xlabel('Residue Index (Chain ID, Residue Number, Segment ID)', fontdict=FONT_STYLES["xlabel"])
+        else:
+            plt.xlabel('Residue Index (Chain ID, Residue Number)', fontdict=FONT_STYLES["xlabel"])
         plt.ylabel(f'{centrality_type_name.capitalize()} Centrality Score', fontdict=FONT_STYLES["ylabel"])
 
         plt.title(f"PDB ID: {self.pdb_name}", fontdict=FONT_STYLES["title"])

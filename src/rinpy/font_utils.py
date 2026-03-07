@@ -10,6 +10,8 @@ from importlib import resources
 
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import plotly.io as pio
 
 _fonts_loaded = False
 
@@ -31,6 +33,11 @@ def load_fonts_once():
                     )
 
         plt.rcParams["font.family"] = "Times New Roman"
+
+        pio.templates["custom_times"] = go.layout.Template(
+            layout=go.Layout(font=dict(family="Times New Roman"))
+        )
+        pio.templates.default = "custom_times"
         logging.info(f"Active font: {plt.rcParams['font.family'][0]}")
 
     except Exception as e:

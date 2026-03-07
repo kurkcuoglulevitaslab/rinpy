@@ -14,20 +14,21 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import seaborn as sns
+from matplotlib.ticker import MaxNLocator
 
 from rinpy.constants import FREQUENCY_HIGH_PERCENTAGE_TEMPLATE, CHAIN_ID, RESIDUE_NUMBER, RESIDUE_NAME, PDB_ID, \
-    CENTRALITY_SCORE, INSERTION, EXCEL_EXT, CSV_EXT, HTML_EXT, ATOM_NUMBER
+    CENTRALITY_SCORE, INSERTION, EXCEL_EXT, CSV_EXT, HTML_EXT, ATOM_NUMBER, SEGMENT_ID
 from rinpy.style_config import FONT_STYLES, FONT_FAMILY
 from rinpy.utils import CentralityType
 
-RESIDUE_ID = "residue_id"
-OCCURRENCES = "occurrences"
-PDBS = "pdbs"
-FREQUENCY = "frequency"
-PDB_IDS = 'pdb_ids'
-COUNT = 'count'
+_RESIDUE_ID = "residue_id"
+_OCCURRENCES = "occurrences"
+_PDBS = "pdbs"
+_FREQUENCY = "frequency"
+_PDB_IDS = 'pdb_ids'
+_COUNT = 'count'
 
-_COLONS = [PDB_ID, RESIDUE_NAME, CHAIN_ID, RESIDUE_NUMBER, INSERTION, CENTRALITY_SCORE]
+_COLONS = [PDB_ID, RESIDUE_NAME, CHAIN_ID, RESIDUE_NUMBER, INSERTION, SEGMENT_ID, CENTRALITY_SCORE]
 
 
 class QuantileAnalyzer:
@@ -39,12 +40,13 @@ class QuantileAnalyzer:
         self.merge_files_and_convert_to_df()
 
     def merge_files_and_convert_to_df(self):
+        """ Merge all files and convert them into a dataframe."""
         file_row_list = []
         for pdb_id, out_file_path in self.high_percentage_dict.items():
             file_out_df = pd.read_csv(out_file_path,
                                       sep=";",
                                       names=[ATOM_NUMBER, CENTRALITY_SCORE, RESIDUE_NAME, CHAIN_ID, RESIDUE_NUMBER,
-                                             INSERTION])
+                                             INSERTION, SEGMENT_ID])
             for _, row in file_out_df.iterrows():
                 file_row_list.append({
                     PDB_ID: pdb_id,
@@ -52,15 +54,19 @@ class QuantileAnalyzer:
                     CHAIN_ID: row[CHAIN_ID],
                     RESIDUE_NUMBER: row[RESIDUE_NUMBER],
                     INSERTION: str(row[INSERTION]).strip() if pd.notna(row[INSERTION]) else "",
+                    SEGMENT_ID: str(row[SEGMENT_ID]).strip() if pd.notna(row[SEGMENT_ID]) else "",
                     CENTRALITY_SCORE: row[CENTRALITY_SCORE]
                 })
 
         new_data_df = pd.DataFrame(file_row_list)
-        self.outfile_df = pd.concat([self.outfile_df, new_data_df], ignore_index=True)
+        if self.outfile_df.empty:
+            self.outfile_df = new_data_df
+        else:
+            self.outfile_df = pd.concat([self.outfile_df, new_data_df], ignore_index=True)
 
     def _find_frequency(self):
         """Finds the frequency of each residue along with its name, number, chain id, and insertion code"""
-        return self.outfile_df.groupby([RESIDUE_NAME, RESIDUE_NUMBER, CHAIN_ID, INSERTION]).size()
+        return self.outfile_df.groupby([RESIDUE_NAME, RESIDUE_NUMBER, CHAIN_ID, INSERTION, SEGMENT_ID]).size()
 
     def run_analysis(self):
         """Runs the analysis to find frequencies and save the results to a csv file and plot bar plot and heatmaps"""
@@ -70,14 +76,15 @@ class QuantileAnalyzer:
         self._save_heatmap(sorted_out_file_list)
         self._save_heatmap_interactive(sorted_out_file_list)
 
-    def _write_to_file(self, fre_df):
+    def _write_to_file(self, fre_df: pd.DataFrame):
+        """Writes the results to a csv and an Excel files"""
         fre_df = fre_df.sort_values(ascending=False)
         out_file_list = []
         for index, value in fre_df.items():
             row_df = self.outfile_df[
                 (self.outfile_df[RESIDUE_NAME] == index[0]) & (self.outfile_df[RESIDUE_NUMBER] == index[1]) & (
-                        self.outfile_df[CHAIN_ID] == index[2]) & (
-                        self.outfile_df[INSERTION] == index[3])]
+                        self.outfile_df[CHAIN_ID] == index[2]) & (self.outfile_df[INSERTION] == index[3]) & (
+                        self.outfile_df[SEGMENT_ID] == index[4])]
             pdb_ids = []
             for r in row_df.iterrows():
                 pdb_ids.append(r[1][PDB_ID])
@@ -87,20 +94,22 @@ class QuantileAnalyzer:
                 RESIDUE_NUMBER: index[1],
                 CHAIN_ID: index[2],
                 INSERTION: index[3],
-                COUNT: value,
-                PDB_IDS: pdb_ids
+                SEGMENT_ID: index[4],
+                _COUNT: value,
+                _PDB_IDS: pdb_ids
             })
 
-        sorted_out_file_list = sorted(out_file_list, key=lambda x: (x[CHAIN_ID], x[RESIDUE_NAME], x[COUNT]))
+        sorted_out_file_list = sorted(out_file_list,
+                                      key=lambda x: (x[CHAIN_ID], x[RESIDUE_NUMBER], x[RESIDUE_NAME], x[_COUNT]))
 
         out_file_df = pd.DataFrame(sorted_out_file_list)
-        out_file_df[PDB_IDS] = out_file_df[PDB_IDS].astype(str).str.replace("'", '')
+        out_file_df[_PDB_IDS] = out_file_df[_PDB_IDS].astype(str).str.replace("'", '')
         output_filename = os.path.join(self.destination_output_path, FREQUENCY_HIGH_PERCENTAGE_TEMPLATE.format(
             type=self.centrality_type.display_name))
 
         self._export_to_frequency_with_pdb_ids_to_csv_file(out_file_df=out_file_df, output_filename=output_filename)
 
-        out_file_df[PDB_IDS] = out_file_df[PDB_IDS].astype(str).str.replace('[\]\[]', '')
+        out_file_df[_PDB_IDS] = out_file_df[_PDB_IDS].astype(str).str.replace('[\]\[]', '')
 
         self._write_to_excel(out_file_df=out_file_df, output_filename=output_filename)
 
@@ -109,20 +118,21 @@ class QuantileAnalyzer:
         return sorted_out_file_list
 
     @staticmethod
-    def _write_to_excel(out_file_df, output_filename):
+    def _write_to_excel(out_file_df: pd.DataFrame, output_filename: str) -> None:
         """Writes dataframe to the Excel file."""
         df_copy = out_file_df.copy()
-        headers = [RESIDUE_NAME, RESIDUE_NUMBER, CHAIN_ID, INSERTION, FREQUENCY, PDBS]
+        headers = [RESIDUE_NAME, RESIDUE_NUMBER, CHAIN_ID, INSERTION, SEGMENT_ID, _FREQUENCY, _PDBS]
         df_copy.columns = headers
         out_file_df.to_excel(f"{output_filename}{EXCEL_EXT}", index=False)
 
     @staticmethod
-    def _export_to_frequency_with_pdb_ids_to_csv_file(out_file_df, output_filename):
+    def _export_to_frequency_with_pdb_ids_to_csv_file(out_file_df: pd.DataFrame, output_filename: str) -> None:
         max_residue_name_len = out_file_df[RESIDUE_NAME].astype(str).map(len).max()
         max_residue_num_len = out_file_df[RESIDUE_NUMBER].astype(str).map(len).max()
         max_chain_id_len = out_file_df[CHAIN_ID].astype(str).map(len).max()
         max_insertion_len = out_file_df[INSERTION].astype(str).map(len).max()
-        max_count_len = out_file_df[COUNT].astype(str).map(len).max()
+        max_segment_id_len = out_file_df[SEGMENT_ID].astype(str).map(len).max()
+        max_count_len = out_file_df[_COUNT].astype(str).map(len).max()
 
         out_file_df[RESIDUE_NAME] = out_file_df[RESIDUE_NAME].astype(str).map(
             lambda x: x.ljust(max_residue_name_len))
@@ -130,7 +140,10 @@ class QuantileAnalyzer:
             lambda x: x.rjust(max_residue_num_len))
         out_file_df[CHAIN_ID] = out_file_df[CHAIN_ID].astype(str).map(lambda x: x.ljust(max_chain_id_len))
         out_file_df[INSERTION] = out_file_df[INSERTION].astype(str).map(lambda x: x.ljust(max_insertion_len))
-        out_file_df[COUNT] = out_file_df[COUNT].astype(str).map(lambda x: x.rjust(max_count_len))
+        out_file_df[SEGMENT_ID] = out_file_df[SEGMENT_ID].astype(str).map(lambda x: x.ljust(max_segment_id_len))
+        out_file_df[_COUNT] = out_file_df[_COUNT].astype(str).map(lambda x: x.rjust(max_count_len))
+
+        out_file_df = out_file_df.sort_values(by=[CHAIN_ID, RESIDUE_NUMBER, RESIDUE_NAME, _COUNT])
 
         out_file_df.to_csv(
             path_or_buf=f"{output_filename}{CSV_EXT}",
@@ -139,19 +152,21 @@ class QuantileAnalyzer:
             index=False)
 
     @staticmethod
-    def _export_to_frequency_without_pdb_ids_to_csv_file(fre_df, output_filename):
-        index_df = fre_df.index.to_frame(index=False)
+    def _export_to_frequency_without_pdb_ids_to_csv_file(fre_df: pd.DataFrame, output_filename: str) -> None:
+        index_df = fre_df.index.to_frame(index=False).astype(str)
 
-        max_residue_name_len = index_df.iloc[:, 0].astype(str).map(len).max()
-        max_residue_num_len = index_df.iloc[:, 1].astype(str).map(len).max()
-        max_chain_id_len = index_df.iloc[:, 2].astype(str).map(len).max()
-        max_insertion_len = index_df.iloc[:, 3].astype(str).map(len).max()
+        max_residue_name_len = index_df.iloc[:, 0].map(len).max()
+        max_residue_num_len = index_df.iloc[:, 1].map(len).max()
+        max_chain_id_len = index_df.iloc[:, 2].map(len).max()
+        max_insertion_len = index_df.iloc[:, 3].map(len).max()
+        max_segment_id_len = index_df.iloc[:, 4].map(len).max()
         max_count_len = fre_df.astype(str).map(len).max()
 
-        index_df.iloc[:, 0] = index_df.iloc[:, 0].astype(str).str.ljust(max_residue_name_len)
-        index_df.iloc[:, 1] = index_df.iloc[:, 1].astype(str).str.rjust(max_residue_num_len)
-        index_df.iloc[:, 2] = index_df.iloc[:, 2].astype(str).str.ljust(max_chain_id_len)
-        index_df.iloc[:, 3] = index_df.iloc[:, 3].astype(str).str.ljust(max_insertion_len)
+        index_df.iloc[:, 0] = index_df.iloc[:, 0].str.ljust(max_residue_name_len)
+        index_df.iloc[:, 1] = index_df.iloc[:, 1].str.rjust(max_residue_num_len)
+        index_df.iloc[:, 2] = index_df.iloc[:, 2].str.ljust(max_chain_id_len)
+        index_df.iloc[:, 3] = index_df.iloc[:, 3].str.ljust(max_insertion_len)
+        index_df.iloc[:, 4] = index_df.iloc[:, 4].str.ljust(max_segment_id_len)
         counts_padded = fre_df.astype(str).str.rjust(max_count_len)
 
         final_df = pd.concat([index_df, counts_padded.reset_index(drop=True)], axis=1)
@@ -162,21 +177,28 @@ class QuantileAnalyzer:
             header=False,
             index=False)
 
-    def _save_bar_plot(self, sorted_out_file_list):
+    @staticmethod
+    def _residue_tuple_sort_key(residue_tuple):
+        """extract key items from residue tuple"""
+        res_num, ins, seg_id = residue_tuple
+        return res_num, ins or "", seg_id or ""
 
+    def _save_bar_plot(self, sorted_out_file_list):
+        """save frequency bar plot for the given high percentage centrality scores."""
         unique_chain_ids = sorted(set(entry[CHAIN_ID] for entry in sorted_out_file_list))
         colors = plt.get_cmap('jet')(np.linspace(0, 1, len(unique_chain_ids)))
         residue_counts = {chain_id: {} for chain_id in unique_chain_ids}
         for chain_id in unique_chain_ids:
             chain_entries = [entry for entry in sorted_out_file_list if entry[CHAIN_ID] == chain_id]
-            chain_entries = sorted(chain_entries, key=lambda x: (x[RESIDUE_NUMBER], x[INSERTION]))
+            chain_entries = sorted(chain_entries, key=lambda x: (x[RESIDUE_NUMBER], x[INSERTION], x[SEGMENT_ID]))
 
             for entry in chain_entries:
                 residue_number = entry[RESIDUE_NUMBER]
                 insertion = entry[INSERTION]
-                count = entry[COUNT]
+                segment_id = entry[SEGMENT_ID]
+                count = entry[_COUNT]
 
-                key = (residue_number, insertion)
+                key = (residue_number, insertion, segment_id)
 
                 if key not in residue_counts[chain_id]:
                     residue_counts[chain_id][key] = 0
@@ -187,7 +209,7 @@ class QuantileAnalyzer:
         for counts in residue_counts.values():
             unique_residue_numbers.update(counts.keys())
 
-        unique_residue_numbers = sorted(unique_residue_numbers)
+        unique_residue_numbers = sorted(unique_residue_numbers, key=self._residue_tuple_sort_key)
 
         x_positions = np.arange(len(unique_residue_numbers))
 
@@ -200,10 +222,8 @@ class QuantileAnalyzer:
             x_positions_adjusted = x_positions + i * bar_width
             ax.bar(x_positions_adjusted, counts, width=bar_width, label=f"Chain {chain_id}", color=color)
 
-        x_labels = [
-            f"{num}{ins}" if ins != "''" else str(num)
-            for num, ins in unique_residue_numbers
-        ]
+        x_labels = [self._format_residue_label(num, ins, seg_id) for num, ins, seg_id in
+                    sorted(unique_residue_numbers, key=self._residue_tuple_sort_key)]
 
         ax.set_xticks(x_positions)
         ax.set_xticklabels(x_labels, rotation=90, **{
@@ -211,10 +231,19 @@ class QuantileAnalyzer:
             "fontfamily": FONT_STYLES["xtick"]["fontfamily"]
         })
 
-        ax.set_xlabel("Residue Number", fontdict=FONT_STYLES["xlabel"])
+        has_any_seg_id = any(
+            seg_id not in (None, '', "''")
+            for _, _, seg_id in unique_residue_numbers
+        )
+        if has_any_seg_id:
+            ax.set_xlabel("Residue Number (Segment ID)", fontdict=FONT_STYLES["xlabel"])
+        else:
+            ax.set_xlabel("Residue Number", fontdict=FONT_STYLES["xlabel"])
         ax.set_ylabel("Frequency of High Percentage Residues", fontdict=FONT_STYLES["xlabel"])
         ax.legend(loc="upper right")
         ax.legend(prop={"family": FONT_FAMILY, "size": FONT_STYLES["legend"]["fontsize"]})
+
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True, nbins="auto", min_n_ticks=2))
 
         plt.tight_layout()
 
@@ -222,26 +251,35 @@ class QuantileAnalyzer:
                                             f"frequency_high_percentage_{self.centrality_type.display_name}_bar_plot")
         plt.savefig(plot_output_filename, dpi=300)
 
+    def _prepare_heatmap_dataframe(self, sorted_out_file_list, is_interactive: bool = False):
+        """ prepare the heatmap data for the given high percentage centrality score residues."""
+        residue_number_dtype = str if is_interactive else int
+
+        total_pdb_ids = len(set(pdb_id for entry in sorted_out_file_list for pdb_id in entry[_PDB_IDS]))
+        data = [[entry[RESIDUE_NAME], entry[RESIDUE_NUMBER], entry[CHAIN_ID], entry[INSERTION], entry[SEGMENT_ID],
+                 entry[_COUNT], entry[_PDB_IDS]] for entry in sorted_out_file_list]
+        df = pd.DataFrame(data, columns=[RESIDUE_NAME, RESIDUE_NUMBER, CHAIN_ID, INSERTION, SEGMENT_ID, _FREQUENCY,
+                                         _OCCURRENCES])
+        df[RESIDUE_NUMBER] = df[RESIDUE_NUMBER].astype(residue_number_dtype)
+        df[_FREQUENCY] = df[_FREQUENCY].astype(int)
+        df[_RESIDUE_ID] = df.apply(self._make_residue_id, axis=1)
+        heatmap_data = df.pivot_table(index=CHAIN_ID, columns=_RESIDUE_ID, values=_FREQUENCY, aggfunc="sum",
+                                      fill_value=0)
+        return df, heatmap_data, total_pdb_ids
+
+    def _residue_sort_key(self, residue_id: str):
+        """ extracts and returns key ids from the given the residue id."""
+        res_num, ins, seg_id = self._parse_residue_string(residue_id)
+        return res_num, ins or "", seg_id or ""
+
     def _save_heatmap(self, sorted_out_file_list):
-
-        total_pdb_ids = len(set(pdb_id for entry in sorted_out_file_list for pdb_id in entry[PDB_IDS]))
-
-        data = [[entry[RESIDUE_NAME], entry[RESIDUE_NUMBER], entry[CHAIN_ID], entry[INSERTION], entry[COUNT],
-                 entry[PDB_IDS]]
-                for entry in sorted_out_file_list]
-
-        df = pd.DataFrame(data, columns=[RESIDUE_NAME, RESIDUE_NUMBER, CHAIN_ID, INSERTION, FREQUENCY, OCCURRENCES])
-        df[RESIDUE_NUMBER] = df[RESIDUE_NUMBER].astype(int)
-        df[FREQUENCY] = df[FREQUENCY].astype(int)
-        df[RESIDUE_ID] = df.apply(
-            lambda row: f"{row[RESIDUE_NUMBER]}{row[INSERTION]}" if row[INSERTION] else str(row[RESIDUE_NUMBER]),
-            axis=1)
-
-        heatmap_data = df.pivot_table(index=CHAIN_ID, columns=RESIDUE_ID, values=FREQUENCY, aggfunc='sum', fill_value=0)
-
+        """ saves the heatmap data as a PNG file."""
+        df, heatmap_data, total_pdb_ids = self._prepare_heatmap_dataframe(
+            sorted_out_file_list=sorted_out_file_list,
+            is_interactive=False
+        )
         heatmap_data = heatmap_data.sort_index(ascending=False)
-        heatmap_data = heatmap_data[sorted(heatmap_data.columns, key=lambda x: (
-            int(''.join(filter(str.isdigit, x))), ''.join(filter(str.isalpha, x))))]
+        heatmap_data = heatmap_data[sorted(heatmap_data.columns, key=self._residue_sort_key)]
 
         heatmap_data = heatmap_data.apply(pd.to_numeric, errors='coerce')
 
@@ -280,11 +318,7 @@ class QuantileAnalyzer:
 
         sns_heatmap.set_xticks(np.arange(len(heatmap_data.columns)) + 0.5)
 
-        formatted_columns = [
-            f"{res_num}{ins}" if ins else str(res_num)
-            for col in heatmap_data.columns
-            for res_num, ins in [self._parse_residue_string(col)]
-        ]
+        formatted_columns = self._format_columns(heatmap_data=heatmap_data)
         sns_heatmap.set_xticklabels(
             formatted_columns,
             rotation=90,
@@ -296,19 +330,35 @@ class QuantileAnalyzer:
         self.apply_colorbar_style(cbar, cbar_label="Frequency")
 
         plt.title(f"Residue Frequency Heatmap ({self.centrality_type.display_name_capitalized()})",
-                  fontdict=FONT_STYLES["title"])
-        plt.xlabel("Residue Number", fontdict=FONT_STYLES["xlabel"])
-        plt.ylabel("Chain ID", fontdict=FONT_STYLES["ylabel"])
+                  fontdict={"fontsize": 24, "fontfamily": FONT_FAMILY}, pad=12)
+        font_dict = {"fontsize": 18, "fontfamily": FONT_FAMILY}
+        if self._has_any_seg_id(df=df):
+            plt.xlabel("Residue Number (Segment ID)", fontdict=font_dict)
+        else:
+            plt.xlabel("Residue Number", fontdict=font_dict)
+        plt.ylabel("Chain ID", fontdict=font_dict)
         plt.xticks(rotation=90, fontsize=FONT_STYLES['xtick_medium']['labelsize'], fontname=FONT_FAMILY)
-        plt.yticks(fontsize=FONT_STYLES['xtick']['labelsize'], fontname=FONT_FAMILY)
+        plt.yticks(fontsize=font_dict['fontsize'], fontname=FONT_FAMILY)
         plt.tight_layout()
         plot_output_filename = os.path.join(self.destination_output_path,
                                             f"frequency_high_percentage_{self.centrality_type.display_name}_heatmap")
         plt.savefig(plot_output_filename, dpi=300, bbox_inches="tight")
 
     @staticmethod
+    def _has_any_seg_id(df):
+        segment_id = df[SEGMENT_ID]
+        has_valid_seg_id = (segment_id.notna() & (segment_id != '') & (segment_id != "''"))
+        return has_valid_seg_id.any()
+
+    @staticmethod
     def _parse_residue_string(s: str):
+        """ parsing the residue string into residue number, insertion, and segment_id."""
         s = s.strip()
+        if ':' in s:
+            segment_id, s = s.split(':', 1)
+            segment_id = segment_id.strip()
+        else:
+            segment_id = ''
         if s.endswith("''"):
             residue_number = int(s[:-2])
             insertion = ''
@@ -318,46 +368,75 @@ class QuantileAnalyzer:
                 raise ValueError(f"Invalid residue string format: {s}")
             residue_number = int(match.group(1))
             insertion = match.group(2)
-        return residue_number, insertion
+
+        return residue_number, insertion, segment_id
+
+    @staticmethod
+    def _make_residue_id(row):
+        """ generates the residue identifier based on the residue number, insertion, and segment_id."""
+        seg = row[SEGMENT_ID]
+        ins = row[INSERTION]
+        if pd.notna(seg) and seg != '' and pd.notna(ins) and ins != '':
+            return f"{seg}:{row[RESIDUE_NUMBER]}{ins}"
+        elif pd.notna(seg) and seg != '':
+            return f"{seg}:{row[RESIDUE_NUMBER]}"
+        elif pd.notna(ins) and ins != '':
+            return f"{row[RESIDUE_NUMBER]}{ins}"
+        else:
+            return str(row[RESIDUE_NUMBER])
+
+    @staticmethod
+    def _format_residue_label(res_num, ins, seg_id):
+        """ formats the residue representation in the x-axis of the plots."""
+        has_insertion = ins not in (None, "", "''")
+        base = f"{res_num}{ins}" if has_insertion else str(res_num)
+        if seg_id not in (None, "", "''"):
+            return f"{base} ({seg_id})"
+        return base
+
+    def _format_columns(self, heatmap_data):
+        """ formats the heatmap data columns for the x-axis of the plots."""
+        return [
+            self._format_residue_label(*self._parse_residue_string(col))
+            for col in heatmap_data.columns
+        ]
+
+    @staticmethod
+    def _auto_tick_font_size(n_ticks, min_size=10, base_max=14):
+        """ generates automatic font size for the tick based on the number of ticks."""
+        if n_ticks <= 10:
+            max_size = base_max + 2
+        else:
+            max_size = base_max
+        scale = max(1.0, (n_ticks / 20) ** 0.5)
+        size = max_size / scale
+        return max(min_size, int(round(size)))
 
     def _save_heatmap_interactive(self, sorted_out_file_list):
-
-        total_pdb_ids = len(set(pdb_id for entry in sorted_out_file_list for pdb_id in entry[PDB_IDS]))
-
-        data = [[entry[RESIDUE_NAME], entry[RESIDUE_NUMBER], entry[CHAIN_ID], entry[INSERTION], entry[COUNT],
-                 entry[PDB_IDS]]
-                for entry in sorted_out_file_list]
-
-        df = pd.DataFrame(data, columns=[RESIDUE_NAME, RESIDUE_NUMBER, CHAIN_ID, INSERTION, FREQUENCY, OCCURRENCES])
-        df[RESIDUE_NUMBER] = df[RESIDUE_NUMBER].astype(str)
-        df[FREQUENCY] = df[FREQUENCY].astype(int)
-        df[RESIDUE_ID] = df.apply(
-            lambda row: f"{row[RESIDUE_NUMBER]}{row[INSERTION]}" if row[INSERTION] else str(row[RESIDUE_NUMBER]),
-            axis=1)
-
-        heatmap_data = df.pivot_table(index=CHAIN_ID, columns=RESIDUE_ID, values=FREQUENCY, aggfunc='sum', fill_value=0)
+        """ saves the heatmap data in the interactive HTML."""
+        df, heatmap_data, total_pdb_ids = self._prepare_heatmap_dataframe(
+            sorted_out_file_list=sorted_out_file_list,
+            is_interactive=True
+        )
 
         heatmap_data = heatmap_data.sort_index(ascending=False)
-        heatmap_data = heatmap_data[sorted(heatmap_data.columns, key=lambda x: (
-            int(''.join(filter(str.isdigit, x))), ''.join(filter(str.isalpha, x))))]
+        heatmap_data = heatmap_data[sorted(heatmap_data.columns, key=self._residue_sort_key)]
 
-        agg_df = df.groupby([CHAIN_ID, RESIDUE_NUMBER, INSERTION]).agg({
+        agg_df = df.groupby([CHAIN_ID, RESIDUE_NUMBER, INSERTION, SEGMENT_ID]).agg({
             RESIDUE_NAME: lambda x: ', '.join(sorted(set(x))),
-            OCCURRENCES: lambda x: ', '.join(sorted(set(
+            _OCCURRENCES: lambda x: ', '.join(sorted(set(
                 pdb.strip()
                 for sublist in x
                 for pdb in str(sublist).strip("[]").replace('"', '').split(',')
             )))
         }).reset_index()
 
-        agg_df[RESIDUE_ID] = agg_df.apply(
-            lambda row: f"{row[RESIDUE_NUMBER]}{row[INSERTION]}" if row[INSERTION] else str(row[RESIDUE_NUMBER]),
-            axis=1)
+        agg_df[_RESIDUE_ID] = agg_df.apply(self._make_residue_id, axis=1)
 
-        residue_matrix = agg_df.pivot(index=CHAIN_ID, columns=RESIDUE_ID, values=RESIDUE_NAME).reindex(
+        residue_matrix = agg_df.pivot(index=CHAIN_ID, columns=_RESIDUE_ID, values=RESIDUE_NAME).reindex(
             index=heatmap_data.index, columns=heatmap_data.columns, fill_value="")
 
-        pdb_matrix = agg_df.pivot(index=CHAIN_ID, columns=RESIDUE_ID, values=OCCURRENCES).reindex(
+        pdb_matrix = agg_df.pivot(index=CHAIN_ID, columns=_RESIDUE_ID, values=_OCCURRENCES).reindex(
             index=heatmap_data.index, columns=heatmap_data.columns, fill_value="")
 
         def wrap_pdb_ids(pdb_str, wrap_after=8):
@@ -378,22 +457,20 @@ class QuantileAnalyzer:
 
                 resname = resname if pd.notna(resname) else "None"
                 pdbs_wrapped = wrap_pdb_ids(pdbs_raw) if pd.notna(pdbs_raw) else "None"
-                residue_number, insertion = self._parse_residue_string(col)
+                residue_number, insertion, segment_id = self._parse_residue_string(col)
                 custom_hovertext.loc[row, col] = (
-                    f"<b>Residue Number</b>: {residue_number}{insertion}<br>"
-                    f"<b>Chain ID</b>: {row}<br>"
-                    f"<b>Residue Name(s)</b>: {resname}<br>"
-                    f"<b>Frequency</b>: {freq}<br>"
-                    f"<b>PDB IDs</b>: {pdbs_wrapped}"
+                        f"<b>Residue Number</b>: "
+                        f"{residue_number}{insertion if insertion and insertion != '' else ''}<br>"
+                        + (f"<b>Segment ID</b>: {segment_id}<br>" if segment_id not in (None, '', "''") else "")
+                        + f"<b>Chain ID</b>: {row}<br>"
+                          f"<b>Residue Name(s)</b>: {resname}<br>"
+                          f"<b>Frequency</b>: {freq}<br>"
+                          f"<b>PDB IDs</b>: {pdbs_wrapped}"
                 )
 
         custom_cmap = sns.diverging_palette(240, 10, as_cmap=True)
         custom_plotly_colorscale = self.matplotlib_to_plotly(custom_cmap)
-        formatted_columns = [
-            f"{res_num}{ins}" if ins else str(res_num)
-            for col in heatmap_data.columns
-            for res_num, ins in [self._parse_residue_string(col)]
-        ]
+        formatted_columns = self._format_columns(heatmap_data=heatmap_data)
         fig = px.imshow(
             heatmap_data,
             x=formatted_columns,
@@ -405,15 +482,24 @@ class QuantileAnalyzer:
         )
 
         fig.update_layout(
-            xaxis_title="Residue Number",
+            xaxis_title=("Residue Number (Segment ID)"
+                         if self._has_any_seg_id(df=df)
+                         else "Residue Number"),
             yaxis_title="Chain ID",
             xaxis=dict(
                 tickangle=45,
                 tickmode='linear',
                 dtick=1,
-                tickfont=dict(size=10),
+                tickfont=dict(size=self._auto_tick_font_size(len(heatmap_data.columns))),
             ),
             font=dict(family=FONT_FAMILY, size=14),
+        )
+        # x-axes is broken, this is fixing that
+        fig.update_xaxes(
+            type="category",
+            tickmode="array",
+            tickvals=formatted_columns,
+            ticktext=formatted_columns
         )
 
         max_freq_data = int(df["frequency"].max())
@@ -444,7 +530,7 @@ class QuantileAnalyzer:
             cmin=0
         )
 
-        fig.update_traces(hovertemplate="%{customdata}", customdata=custom_hovertext.values)
+        fig.update_traces(hovertemplate="%{customdata}<extra></extra>", customdata=custom_hovertext.values)
 
         plot_output_filename = os.path.join(
             self.destination_output_path,
@@ -479,8 +565,8 @@ class QuantileAnalyzer:
         if cbar_label is not None:
             cbar.set_label(
                 cbar_label,
-                fontsize=styles["label"]["fontsize"],
-                fontfamily=styles["label"]["fontfamily"])
+                fontsize=18,
+                fontfamily=FONT_FAMILY)
 
 
 def main():

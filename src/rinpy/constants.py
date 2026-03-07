@@ -66,10 +66,14 @@ TXT_EXT: str = ".txt"
 HTML_EXT: str = ".html"
 PML_EXT: str = ".pml"
 PNG_EXT: str = ".png"
+GRAPHML_EXT: str = ".graphml"
 
 DEFAULT_CUTOFF: float = 4.5
 
 ATOM: str = "ATOM"
+HETATM: str = "HETATM"
+APO: str = "apo"
+HOLO: str = "holo"
 
 CALCULATION_OPTION_DEFAULT_JSON_PATH: str = 'calculation_options.json'
 
@@ -77,3 +81,7 @@ PDB_COLUMNS = ['record_name', 'atom_number', 'blank_1', 'atom_name', 'alt_loc',
                'residue_name', 'blank_2', 'chain_id', 'residue_number', 'insertion',
                'blank_3', 'x_coord', 'y_coord', 'z_coord', 'occupancy', 'b_factor',
                'blank_4', 'segment_id', 'element_symbol', 'charge', 'line_idx']
+
+RNA_BASES = {"A", "U", "G", "C"}
+
+DNA_BASES = {"DA", "DT", "DG", "DC"}

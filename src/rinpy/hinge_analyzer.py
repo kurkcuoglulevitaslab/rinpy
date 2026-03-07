@@ -21,7 +21,7 @@ from scipy.sparse.linalg import eigsh
 from rinpy import log_util
 from rinpy import utils
 from rinpy.constants import RESIDUE_NUMBER, MODE, CHAIN_ID, INSERTION, HIGH_PERCENTAGE_TEMPLATE, RESIDUE_NAME, \
-    CENTRALITY_SCORE, TXT_EXT, PDB_EXT, PML_EXT, CSV_EXT, HTML_EXT, PNG_EXT, X, Y, Z, RESIDUE_INDEX
+    CENTRALITY_SCORE, TXT_EXT, PDB_EXT, PML_EXT, CSV_EXT, HTML_EXT, PNG_EXT, X, Y, Z, RESIDUE_INDEX, SEGMENT_ID
 from rinpy.log_util import log_details
 from rinpy.pymol_utils import PymolUtils
 from rinpy.style_config import FONT_STYLES, FONT_FAMILY, EDGE_COLOR, COLOR_PALETTE
@@ -48,7 +48,8 @@ class HingeAnalyzer:
            contains defined parameters of a node, such as Chain ID, Residue Number and so on.
     """
 
-    def __init__(self, graph, pdb_name, destination_output_path, actual_residue_number_map):
+    def __init__(self, graph: nx.Graph, pdb_name: str, destination_output_path: str,
+                 actual_residue_number_map: dict[int, tuple[str, str, int, str, str, str]]):
         self.graph = graph
         self.pdb_name = pdb_name
         self.destination_output_path = Path(destination_output_path)
@@ -61,12 +62,17 @@ class HingeAnalyzer:
 
         utils.create_folder_not_exists(self.destination_output_path / self.pdb_name / _HINGE_MODES_DIR)
 
-    def compute_laplacian_modes(self, num_modes):
+    def _compute_laplacian_modes(self, num_modes: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray] | None:
+        """computes the eigenvalues and eigenvectors of the graph laplacian, then computes spectral nodes
+            excluding trivial eigenvector
+        """
         nodes = sorted(self.graph.nodes())
         laplacian = nx.laplacian_matrix(self.graph, nodelist=nodes).astype(float)
 
         if not nx.is_connected(self.graph):
-            raise ValueError("Graph must be connected for spectral partitioning.")
+            logging.error("Graph must be connected for spectral partitioning.")
+            logging.info("Graph must be connected for spectral partitioning.")
+            return
 
         k = num_modes + 1
         eigen_values, eigen_vectors = eigsh(laplacian, k=k, which="SM")
@@ -79,20 +85,42 @@ class HingeAnalyzer:
         spectral_modes = eigen_vectors[:, 1:k]  # Fiedler +  {num_modes-1} more num_modes included
 
         start = time.time()
-        self.plot_fiedler(fiedler_vector=fiedler_vector)
+        self._plot_fiedler(fiedler_vector=fiedler_vector)
         log_util.log_elapsed_time_detail("plot_fiedler: ", start, time.time())
 
         return eigen_values, eigen_vectors, fiedler_vector, spectral_modes
 
-    @staticmethod
-    def find_hinge_residues_with_sign(mode_data):
-        hinge_residues = set()
-        for i in range(1, len(mode_data)):
-            if np.sign(mode_data[i]) != np.sign(mode_data[i - 1]):
-                hinge_residues.add(i + 1)  # i+1 -> node index starts from 1 to n while mode_data has 0 index.
-        return sorted(hinge_residues)
+    def _is_same_chain(self, current_node_id: int, next_node_id: int) -> bool:
+        current_node_data = self.actual_residue_number_map.get(current_node_id)
+        next_node_data = self.actual_residue_number_map.get(next_node_id)
+        if current_node_data is None or next_node_data is None:
+            return False
+        return current_node_data[1] == next_node_data[1]  # [1] = chain_id
 
-    def save_and_plot_mode_to_file(self, mode_data, mode_name, hinge_residues):
+    def _find_hinge_residues_with_sign(self, mode_data: np.ndarray) -> list[int]:
+        node_ids_map = dict(enumerate(sorted(self.graph.nodes())))
+
+        mode_signs = np.sign(mode_data)
+        abs_magnitude_diff_signs = np.sign(np.diff(np.abs(mode_data)))
+
+        has_sign_change = np.zeros(len(mode_signs), dtype=bool)
+
+        for i in range(len(mode_signs) - 1):
+            if mode_signs[i] != mode_signs[i + 1]:
+                if self._is_same_chain(node_ids_map[i], node_ids_map[i + 1]):
+                    has_sign_change[i] = True
+
+        for idx, abs_diff_sign in enumerate(abs_magnitude_diff_signs):
+            if has_sign_change[idx] and abs_diff_sign < 0:
+                has_sign_change[idx] = False
+                is_same_chain: bool = self._is_same_chain(node_ids_map[idx], node_ids_map[idx + 1])
+                if is_same_chain:
+                    has_sign_change[idx + 1] = True
+
+        hinge_nodes: set = {node_ids_map[i] for i, is_hinge in enumerate(has_sign_change) if is_hinge}
+        return sorted(hinge_nodes)
+
+    def _save_and_plot_mode_to_file(self, mode_data: np.ndarray, mode_name: str, hinge_residues: list[int]) -> None:
         mode_output_path = os.path.join(self.destination_output_path, self.pdb_name, _HINGE_MODES_DIR)
         utils.create_folder_not_exists(mode_output_path)
         nodes = self.graph.nodes()
@@ -102,14 +130,16 @@ class HingeAnalyzer:
         full_path = os.path.join(str(mode_output_path), f"{mode_name}_hinge_residues{TXT_EXT}")
         self.write_to_file(actual_hinge_residues=actual_hinge_residues_tuple, full_path=full_path)
 
-        residue_keys = [(nodes[n][RESIDUE_NUMBER], nodes[n][CHAIN_ID], nodes[n][INSERTION]) for n in nodes]
+        residue_keys = [(nodes[n][RESIDUE_NAME], nodes[n][CHAIN_ID], nodes[n][RESIDUE_NUMBER], nodes[n][INSERTION],
+                         nodes[n][SEGMENT_ID]) for
+                        n in nodes]
 
         mode_df = pd.DataFrame({
-            RESIDUE_NUMBER: residue_keys,
+            RESIDUE_INDEX: residue_keys,
             'mode': mode_data
         })
 
-        residue_to_mode = mode_df.set_index(RESIDUE_NUMBER)[MODE].to_dict()
+        residue_to_mode = mode_df.set_index(RESIDUE_INDEX)[MODE].to_dict()
 
         base_pdb_df = utils.get_base_pdb_df(residue_to=residue_to_mode,
                                             destination_output_path=self.destination_output_path,
@@ -126,83 +156,112 @@ class HingeAnalyzer:
                                                   sep=";",
                                                   header=None,
                                                   names=[RESIDUE_INDEX, CENTRALITY_SCORE, RESIDUE_NAME, CHAIN_ID,
-                                                         RESIDUE_NUMBER, INSERTION])
+                                                         RESIDUE_NUMBER, INSERTION, SEGMENT_ID])
         self.pymol_utils.export_pymol_script_hinge(
             full_path_to_pdb=out_filename,
             residues=hinge_residues,
             full_path=full_path,
             high_percentage_residues=list(
-                zip(high_percentage_residues_df[RESIDUE_NUMBER], high_percentage_residues_df[INSERTION])))
+                zip(
+                    high_percentage_residues_df[RESIDUE_NAME],
+                    high_percentage_residues_df[CHAIN_ID],
+                    high_percentage_residues_df[RESIDUE_NUMBER],
+                    high_percentage_residues_df[INSERTION],
+                    high_percentage_residues_df[SEGMENT_ID]
+                )
+            )
+        )
 
-    def _save_selected_eigen_vectors(self, spectral_modes):
+    def _save_selected_eigen_vectors(self, spectral_modes: np.ndarray) -> None:
         filtered_data_df = pd.DataFrame(spectral_modes)
         num_columns = filtered_data_df.shape[1]
-        headers = list(range(1, num_columns + 1))
+        headers = [f"mode{i}" for i in range(1, num_columns + 1)]
         filtered_data_df.columns = headers
 
         residue_ids = [
-            f"{self.actual_residue_number_map[i + 1][1]}"
-            + (f"{self.actual_residue_number_map[i + 1][2]}" if len(self.actual_residue_number_map[i + 1]) > 2 and
-                                                                self.actual_residue_number_map[i + 1][2] else "")
+            f"{self.actual_residue_number_map[i + 1][2]}"
             if (i + 1) in self.actual_residue_number_map else str(i + 1)
             for i in range(filtered_data_df.shape[0])
         ]
 
         chain_ids = [
+            f"{self.actual_residue_number_map[i + 1][1]}"
+            if (i + 1) in self.actual_residue_number_map else str(i + 1)
+            for i in range(filtered_data_df.shape[0])
+        ]
+
+        residue_names = [
             f"{self.actual_residue_number_map[i + 1][0]}"
             if (i + 1) in self.actual_residue_number_map else str(i + 1)
             for i in range(filtered_data_df.shape[0])
         ]
 
-        filtered_data_df.insert(0, "Residue Number", residue_ids)
-        filtered_data_df.insert(1, "Chain Id", chain_ids)
+        insertions = [
+            f"{self.actual_residue_number_map[i + 1][3]}"
+            if (i + 1) in self.actual_residue_number_map and self.actual_residue_number_map[i + 1][3] else "''"
+            for i in range(filtered_data_df.shape[0])
+        ]
+
+        segment_ids = [
+            f"{self.actual_residue_number_map[i + 1][4]}"
+            if (i + 1) in self.actual_residue_number_map and self.actual_residue_number_map[i + 1][4] else "''"
+            for i in range(filtered_data_df.shape[0])
+        ]
+
+        filtered_data_df.insert(0, "index", range(1, filtered_data_df.shape[0] + 1))
+        filtered_data_df.insert(1, RESIDUE_NAME, residue_names)
+        filtered_data_df.insert(2, CHAIN_ID, chain_ids)
+        filtered_data_df.insert(3, RESIDUE_NUMBER, residue_ids)
+        filtered_data_df.insert(4, INSERTION, insertions)
+        filtered_data_df.insert(5, SEGMENT_ID, segment_ids)
 
         filtered_data_path = self.destination_output_path / self.pdb_name / _HINGE_MODES_DIR / f'{self.pdb_name}_eigenvectors{CSV_EXT}'
         filtered_data_df.to_csv(filtered_data_path, index=False)
 
-    def compute_hinge_residues_with_sign(self, num_modes=None):
+    def compute_hinge_residues_with_sign(self, num_modes: int = None) -> None:
         if num_modes is None:
             num_modes = 4
 
-        eigen_values, eigen_vectors, fiedler_vector, spectral_modes = self.compute_laplacian_modes(
+        eigen_values, eigen_vectors, fiedler_vector, spectral_modes = self._compute_laplacian_modes(
             num_modes=num_modes)
 
         self._save_selected_eigen_vectors(spectral_modes=spectral_modes)
 
         for i in range(spectral_modes.shape[1]):
             mode_data = spectral_modes[:, i]
-            hinge_residues = self.find_hinge_residues_with_sign(mode_data=mode_data)
+            hinge_residues = self._find_hinge_residues_with_sign(mode_data=mode_data)
             if hinge_residues and len(hinge_residues) > 0:
                 mode_data = np.where(mode_data < 0, -1, 1)
-                self.save_and_plot_mode_to_file(mode_data=mode_data,
-                                                mode_name=f'{self.pdb_name}_laplacian_mode_{(i + 1)}',
-                                                hinge_residues=hinge_residues)
+                mode_name: str = f'{self.pdb_name}_laplacian_mode_{(i + 1)}'
+                self._save_and_plot_mode_to_file(mode_data=mode_data,
+                                                 mode_name=mode_name,
+                                                 hinge_residues=hinge_residues)
 
                 node_ids = sorted(list(self.graph.nodes()))
                 cluster_labels = {node_ids[i]: int(mode_data[i]) for i in range(len(node_ids))}
                 full_path = os.path.join(self.destination_output_path, self.pdb_name, _HINGE_MODES_DIR,
-                                         f'{self.pdb_name}_laplacian_mode_{(i + 1)}_hinge_interactive_clusters_3d{HTML_EXT}')
+                                         f'{mode_name}_hinge_interactive_clusters_3d{HTML_EXT}')
                 self.plot_graph_interactive_clusters_3d(self.graph, cluster_labels, hinge_residues, full_path)
                 start = time.time()
 
-                p = os.path.join(self.destination_output_path, self.pdb_name, _HINGE_MODES_DIR,
-                                 f"{self.pdb_name}_laplacian_mode_{(i + 1)}_graph_clusters_2d{PNG_EXT}")
-                self.plot_graph_clusters_2d(self.graph, cluster_labels, hinge_residues, full_path=p)
+                full_path = os.path.join(self.destination_output_path, self.pdb_name, _HINGE_MODES_DIR,
+                                         f"{mode_name}_graph_clusters_2d{PNG_EXT}")
+                self.plot_graph_clusters_2d(self.graph, cluster_labels, hinge_residues, full_path=full_path)
                 log_util.log_elapsed_time_detail("plot_graph_clusters_2d: ", start, time.time())
 
     @staticmethod
-    def get_actual_hinge_residues_tuple(nodes, hinge_residues):
+    def get_actual_hinge_residues_tuple(nodes, hinge_residues: list[int]) -> list[str]:
         return [(
-            f"{nodes[hr][RESIDUE_NAME]};{nodes[hr][CHAIN_ID]};{nodes[hr][RESIDUE_NUMBER]};'{nodes[hr][INSERTION]}'")
+            f"{nodes[hr][RESIDUE_NAME]};{nodes[hr][CHAIN_ID]};{nodes[hr][RESIDUE_NUMBER]};'{nodes[hr][INSERTION]}';'{nodes[hr][SEGMENT_ID]}'")
             for hr in hinge_residues
         ]
 
-    def get_full_save_path(self, filename: str, extension: str = "png"):
+    def _get_full_save_path(self, filename: str, extension: str = "png") -> str:
         return os.path.join(self.destination_output_path, self.pdb_name, f"{self.pdb_name}_{filename}.{extension}")
 
     def write_to_file(self, actual_hinge_residues, full_path=None):
         if full_path is None:
-            full_path = self.get_full_save_path(filename="hinge_residues", extension="txt")
+            full_path = self._get_full_save_path(filename="hinge_residues", extension="txt")
 
         with open(full_path, 'w') as f:
             for i, hinge_residue in enumerate(actual_hinge_residues):
@@ -212,7 +271,7 @@ class HingeAnalyzer:
                     f.write(f"{hinge_residue}")
 
     @log_details("Plotting Fiedler vector")
-    def plot_fiedler(self, fiedler_vector, sort=False):
+    def _plot_fiedler(self, fiedler_vector: np.ndarray, sort: bool = False) -> None:
         """ Plots and optionally saves the Fiedler vector.
 
         Parameters:
@@ -222,7 +281,7 @@ class HingeAnalyzer:
         - file_format (str): Image format for saving (e.g., 'png', 'pdf').
         - dpi (int): Resolution of the saved image.
         """
-        full_path = self.get_full_save_path(filename="fiedler_vector")
+        full_path = self._get_full_save_path(filename="fiedler_vector")
         vector = fiedler_vector.copy()
         if sort:
             vector = np.sort(vector)
@@ -233,7 +292,7 @@ class HingeAnalyzer:
         ax.set_xlim(0, next_round)
 
         residue_labels = [
-            f"{i + 1} ({self.actual_residue_number_map[i + 1][0]}, {utils.get_residue_id_by_tuple(self.actual_residue_number_map[i + 1])})"
+            f"{i + 1} ({self.actual_residue_number_map[i + 1][1]}, {utils.get_residue_id_by_tuple(self.actual_residue_number_map[i + 1])})"
             for i in range(len(vector))
             if (i + 1) in self.actual_residue_number_map
         ]
@@ -251,7 +310,7 @@ class HingeAnalyzer:
             "fontsize": FONT_STYLES["xtick"]["labelsize"],
             "fontfamily": FONT_STYLES["xtick"]["fontfamily"]
         })
-        ax.set_xlabel("Residue Index (Chain Id, Residue Number)", fontdict=FONT_STYLES["xlabel"])
+        ax.set_xlabel("Residue Index (Chain ID, Residue Number)", fontdict=FONT_STYLES["xlabel"])
 
         for label in ax.get_yticklabels():
             label.set_fontsize(FONT_STYLES["ytick"]["labelsize"])
@@ -272,7 +331,7 @@ class HingeAnalyzer:
 
     def plot_graph_clusters_2d(self, graph, cluster_labels, hinge_residues, full_path=None):
         if full_path is None:
-            full_path = self.get_full_save_path(filename="graph_clusters_2d")
+            full_path = self._get_full_save_path(filename="graph_clusters_2d")
         unique_clusters = sorted(set(cluster_labels.values()))
         color_map = {cluster_id: COLOR_PALETTE[i % len(COLOR_PALETTE)] for i, cluster_id in
                      enumerate(unique_clusters)}
@@ -326,7 +385,7 @@ class HingeAnalyzer:
 
     def plot_graph_clusters_3d(self, graph, cluster_labels, hinge_residues):
         """ 3D plot (X-Y-Z) with manually assigned high-contrast colors."""
-        full_path = self.get_full_save_path(filename="graph_clusters_3d")
+        full_path = self._get_full_save_path(filename="graph_clusters_3d")
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
@@ -393,14 +452,17 @@ class HingeAnalyzer:
             y = [graph.nodes[n][Y] for n in cluster_nodes]
             z = [graph.nodes[n][Z] for n in cluster_nodes]
 
-            labels = [
-                (
-                    f"{graph.nodes[n][RESIDUE_NAME]} "
-                    f"(Residue Number: {utils.get_residue_id(graph.nodes[n])}, Chain: {graph.nodes[n][CHAIN_ID]}), "
+            labels = []
+            for n in cluster_nodes:
+                node = graph.nodes[n]
+                seg_id = node.get(SEGMENT_ID)
+                seg_text = f", Segment ID: {seg_id}" if seg_id not in [None, '', "''"] else ''
+                label = (
+                    f"{node[RESIDUE_NAME]} "
+                    f"(Residue Number: {utils.get_residue_id(node)}, Chain: {node[CHAIN_ID]}{seg_text}), "
                     f"Cluster ({cluster_id})"
                 )
-                for n in cluster_nodes
-            ]
+                labels.append(label)
 
             trace = go.Scatter3d(
                 x=x,
@@ -410,11 +472,13 @@ class HingeAnalyzer:
                 marker=dict(size=5, color=color_map[cluster_id]),
                 text=labels,
                 hoverinfo='text',
-                name=f'Cluster {cluster_id}'
+                name=f'Cluster {cluster_id}',
+                hoverlabel=dict(
+                    font=dict(color='white')
+                )
             )
             node_traces.append(trace)
 
-        # Create edge trace
         edge_x, edge_y, edge_z = [], [], []
         for u, v in graph.edges():
             edge_x += [graph.nodes[u][X], graph.nodes[v][X], None]
@@ -437,18 +501,18 @@ class HingeAnalyzer:
             z=[graph.nodes[n][Z] for n in hinge_residues],
             mode='markers+text',
             marker=dict(size=7, color='yellow', symbol='diamond', line=dict(color='black', width=1)),
-            # text=[f"Hinge {n}" for n in hinge_residues],
-            # hoverinfo='text',
             name='Hinge Residues',
-            hoverinfo='text',  # hides x, y, z and only shows hovertext
+            hoverinfo='text',
             hovertext=[
                 f"<b>Residue Name: {graph.nodes[n][RESIDUE_NAME]}</b><br>"
                 f"<b>Chain: {graph.nodes[n][CHAIN_ID]}</b><br>"
                 f"<b>Hinge Residue Number: {utils.get_residue_id(graph.nodes[n])}</b>"
-                f"<br>────────────────────<br>"
-                f"x={graph.nodes[n]['x']:.3f}<br>"
-                f"y={graph.nodes[n]['y']:.3f}<br>"
-                f"z={graph.nodes[n]['z']:.3f}"
+                + (f"<b>Segment ID</b>: {graph.nodes[n][SEGMENT_ID]}<br>" if graph.nodes[n][SEGMENT_ID] not in
+                                                                             [None, '', "''"] else "")
+                + f"<br>────────────────────<br>"
+                  f"x={graph.nodes[n]['x']:.3f}<br>"
+                  f"y={graph.nodes[n]['y']:.3f}<br>"
+                  f"z={graph.nodes[n]['z']:.3f}"
                 for n in hinge_residues],
             hoverlabel=dict(
                 bgcolor='yellow',
@@ -457,14 +521,36 @@ class HingeAnalyzer:
         )
 
         fig = go.Figure(data=[edge_trace, hinge_trace] + node_traces)
+
+        axis_style = dict(
+            title_font=dict(family=FONT_FAMILY, size=18),
+            tickfont=dict(family=FONT_FAMILY, size=16)
+        )
         fig.update_layout(
             scene=dict(
-                xaxis_title='X Coordinate',
-                yaxis_title='Y Coordinate',
-                zaxis_title='Z Coordinate'
+                xaxis=dict(title="X Coordinate", **axis_style),
+                yaxis=dict(title="Y Coordinate", **axis_style),
+                zaxis=dict(title="Z Coordinate", **axis_style),
             ),
             margin=dict(l=0, r=0, b=0, t=40),
-            title='Interactive 3D Spectral Clustering of Residue Interaction Network'
+            title=dict(
+                text="Interactive 3D Spectral Clustering of Residue Interaction Network",
+                font=dict(family="Times New Roman", size=24),
+                x=0.5,
+                xanchor="center",
+                y=0.95,
+                yanchor="top"
+            ),
+            template='plotly',
+            legend=dict(
+                font=dict(family=FONT_FAMILY, size=16),
+                title=dict(
+                    font=dict(family=FONT_FAMILY, size=16)
+                )
+            ),
+            scene_camera=dict(
+                eye=dict(x=1.2, y=1.2, z=1.2)
+            )
         )
 
         pyo.plot(fig, filename=full_path, auto_open=False)

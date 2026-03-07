@@ -79,9 +79,9 @@ class CentralityPdbMapper:
     def process(self):
         logging.info(f'Centrality PDB Mapper has been started...')
         base_file_path = os.path.join(self.destination_output_path, self.pdb_name)
-        columns = [ATOM_NUMBER, CENTRALITY_SCORE, RESIDUE_NAME, CHAIN_ID, RESIDUE_NUMBER, INSERTION]
+        columns = [ATOM_NUMBER, CENTRALITY_SCORE, RESIDUE_NAME, CHAIN_ID, RESIDUE_NUMBER, INSERTION, SEGMENT_ID]
         dtypes = {ATOM_NUMBER: int, CENTRALITY_SCORE: float, RESIDUE_NAME: str, CHAIN_ID: str, RESIDUE_NUMBER: int,
-                  INSERTION: str}
+                  INSERTION: str, SEGMENT_ID: str}
         sort_keys = [ATOM_NUMBER]
 
         centrality_types = {
@@ -151,15 +151,20 @@ class CentralityPdbMapper:
         residue_numbers = [nodes[residue_index][RESIDUE_NUMBER] for residue_index in out_df[ATOM_NUMBER]]
         chain_ids = [nodes[residue_index][CHAIN_ID] for residue_index in out_df[ATOM_NUMBER]]
         insertions = [nodes[residue_index][INSERTION] for residue_index in out_df[ATOM_NUMBER]]
+        residue_names = [nodes[residue_index][RESIDUE_NAME] for residue_index in out_df[ATOM_NUMBER]]
+        segment_ids = [nodes[residue_index][SEGMENT_ID] for residue_index in out_df[ATOM_NUMBER]]
 
         centrality_df = out_df.copy()
 
         centrality_df[RESIDUE_NUMBER] = residue_numbers
         centrality_df[CHAIN_ID] = chain_ids
         centrality_df[INSERTION] = insertions
+        centrality_df[RESIDUE_NAME] = residue_names
+        centrality_df[SEGMENT_ID] = segment_ids
 
         centrality_df[KEY] = list(
-            zip(centrality_df[RESIDUE_NUMBER], centrality_df[CHAIN_ID], centrality_df[INSERTION]))
+            zip(centrality_df[RESIDUE_NAME], centrality_df[CHAIN_ID], centrality_df[RESIDUE_NUMBER],
+                centrality_df[INSERTION], centrality_df[SEGMENT_ID]))
 
         residue_to_centrality = centrality_df.set_index(KEY)[CENTRALITY_SCORE].to_dict()
 

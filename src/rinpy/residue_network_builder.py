@@ -103,7 +103,8 @@ class ResidueNetworkBuilder:
 
     def get_number_of_amino_acid(self):
         """ Returns the total number of amino acid for the given PDB file """
-        return self._get_pdb_df()[PdbRecord.ATOM.name].groupby([CHAIN_ID, RESIDUE_NUMBER, INSERTION]).ngroups
+        return self._get_pdb_df()[PdbRecord.ATOM.name].groupby(
+            [CHAIN_ID, RESIDUE_NUMBER, INSERTION, SEGMENT_ID]).ngroups
 
     def get_actual_residue_number_map(self):
         """ Returns the actual residue map for the given PDB file. This file contains Chain ID and residue number
@@ -219,10 +220,21 @@ class ResidueNetworkBuilder:
             return None
 
     @staticmethod
-    def _get_default_atom_name(atom_df):
-        if (atom_df[ATOM_NAME] == P_ATOM_NAME).any():
+    def _get_default_atom_name(residue_name):
+        if residue_name in RNA_BASES or residue_name in DNA_BASES:
             return P_ATOM_NAME
         return CA_ATOM_NAME
+
+    @staticmethod
+    def _get_record_name(res_atom_df, validate=False):
+        """ returns 'ATOM' or 'HETATM' for a residue-level atom dataframe.
+            Assumes all atoms in the residue share the same record_name.
+        """
+        if validate:
+            if res_atom_df[RECORD_NAME].nunique() != 1:
+                raise ValueError(f"Mixed {ATOM}/{HETATM} found in the same residue.")
+
+        return res_atom_df[RECORD_NAME].iloc[0]
 
     def calculate_contact(self):
         """Calculate the atom-atom distance between residues."""
@@ -230,20 +242,18 @@ class ResidueNetworkBuilder:
         residue_average_coords_list = []
         atoms_df = self._get_pdb_df()[PdbRecord.ATOM.name]
 
-        residue_chain_dict = {(str(chain_id), int(residue_number), str(insertion)): rows for
-                              (chain_id, residue_number, insertion), rows in
-                              atoms_df.groupby([CHAIN_ID, RESIDUE_NUMBER, INSERTION])}
-        residue_chain_dict = {key: residue_chain_dict[key] for key in
-                              sorted(residue_chain_dict.keys(), key=lambda x: (x[0], x[1], x[2]))}
+        residue_chain_dict = {
+            (str(residue_name), str(chain_id), int(residue_number), str(insertion), str(segment_id)): rows for
+            (residue_name, chain_id, residue_number, insertion, segment_id), rows in
+            atoms_df.groupby([RESIDUE_NAME, CHAIN_ID, RESIDUE_NUMBER, INSERTION, SEGMENT_ID], sort=False)}
+
         residue_coord_dict = {}
         residue_number_list = []
 
-        atom_name = self._get_default_atom_name(next(iter(residue_chain_dict.values())))
-        logging.info(f'Default atom name for {self.pdb_name} is {atom_name}')
-
+        default_atom_names = set()
         residue_index = 1
-        for res_num, res_atom_df in residue_chain_dict.items():
-            residue_number_list.append(res_num)
+        for res_num_key, res_atom_df in residue_chain_dict.items():
+            residue_number_list.append(res_num_key)
             average_values = res_atom_df[[X_COORD, Y_COORD, Z_COORD, B_FACTOR]].mean()
             x_coord_average = average_values[X_COORD]
             y_coord_average = average_values[Y_COORD]
@@ -257,19 +267,23 @@ class ResidueNetworkBuilder:
                                         Z_COORD: row[Z_COORD]
                                         })
 
-            residue_coord_dict[res_num] = temp_coord_list
+            residue_coord_dict[res_num_key] = temp_coord_list
 
-            chain_id, residue_number, insertion = cast(Tuple[str, int, str], res_num)
+            residue_name, chain_id, residue_number, insertion, segment_id = cast(Tuple[str, str, int, str, str],
+                                                                                 res_num_key)
+            atom_name = self._get_default_atom_name(residue_name=residue_name)
+            default_atom_names.add(atom_name)
 
-            self.actual_residue_number_map[residue_index] = tuple(
-                list(res_num) + [res_atom_df[RESIDUE_NAME].iloc[-1]])
+            self.actual_residue_number_map[residue_index] = res_num_key + (self._get_record_name(res_atom_df),)
+
             residue_average_pdb_list.append({RECORD_NAME: PdbRecord.ATOM.name,
                                              ATOM_NUMBER: residue_index,
                                              ATOM_NAME: atom_name,
-                                             RESIDUE_NAME: res_atom_df[RESIDUE_NAME].iloc[-1],
+                                             RESIDUE_NAME: residue_name,
                                              CHAIN_ID: chain_id,
                                              RESIDUE_NUMBER: residue_number,
                                              INSERTION: insertion,
+                                             SEGMENT_ID: segment_id,
                                              X_COORD: x_coord_average,
                                              Y_COORD: y_coord_average,
                                              Z_COORD: z_coord_average,
@@ -283,6 +297,8 @@ class ResidueNetworkBuilder:
 
             residue_index += 1
 
+        logging.info(f'Default atom name(s) for {self.pdb_name} are [{", ".join(sorted(default_atom_names))}].')
+
         residue_average_coords_df = pd.DataFrame(residue_average_coords_list)
 
         residue_average_coords_df.to_csv(
@@ -295,13 +311,16 @@ class ResidueNetworkBuilder:
                                self.residue_average_pdb_file_path)
 
         residue_edges_list = self._process_affinity_calculation(residue_number_list, residue_coord_dict)
+        if residue_edges_list:
+            residue_edges_df = pd.DataFrame(residue_edges_list, columns=[SOURCE, TARGET, AFFINITY])
 
-        residue_edges_df = pd.DataFrame(residue_edges_list, columns=[SOURCE, TARGET, AFFINITY])
-
-        residue_edges_df.to_csv(str(self.residue_edges_file_path),
-                                sep='\t',
-                                index=False,
-                                header=False)
+            residue_edges_df.to_csv(str(self.residue_edges_file_path),
+                                    sep='\t',
+                                    index=False,
+                                    header=False)
+            return True
+        else:
+            return False
 
     @log_elapsed_time(message="CALCULATE AFFINITY")
     def _process_affinity_calculation(self, residue_number_list, residue_coord_dict):

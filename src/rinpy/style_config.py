@@ -24,7 +24,8 @@ FONT_STYLES = {
     },
     "colorbar": {
         "label": {"fontsize": 14, "fontfamily": FONT_FAMILY},
-        "tick_params": {"labelsize": 14, "fontfamily": FONT_FAMILY}
+        "tick_params": {"labelsize": 14, "fontfamily": FONT_FAMILY},
+        "tick_params_label": {"labelsize": 14}
     },
 }
 

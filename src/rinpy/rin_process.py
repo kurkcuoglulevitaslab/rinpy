@@ -64,8 +64,8 @@ class RINProcess:
 
     _fonts_initialized = False
 
-    def __init__(self, output_path=None, input_path=None, pdb_ids=None, trajectory_file=None, stride=1,
-                 calculation_options=None, ligand_dict=None, num_workers=None):
+    def __init__(self, output_path: str = None, input_path: str = None, pdb_ids: str = None, trajectory_file=None,
+                 stride=1, calculation_options=None, ligand_dict=None, num_workers: int = None):
 
         if not RINProcess._fonts_initialized:
             load_fonts_once()
@@ -159,7 +159,7 @@ class RINProcess:
     @log_time("Residue Network Builder")
     def _process_residue_network_builder(self, pdb_name=None, pdb_path=None, use_preprocess=True,
                                          destination_output_path=None,
-                                         calculation_options: dict = None) -> ResidueNetworkBuilder:
+                                         calculation_options: dict = None) -> tuple[ResidueNetworkBuilder, bool]:
         """Process Residue Network Builder to prepare necessary input files for Residue Interaction Network."""
         het_atom_list = None
 
@@ -182,9 +182,9 @@ class RINProcess:
                                     remove_hydrogen=calculation_options[REMOVE_HYDROGEN][IS_CHECKED],
                                     num_workers=self.num_workers)
 
-        rgb.calculate_contact()
+        is_success = rgb.calculate_contact()
 
-        return rgb
+        return rgb, is_success
 
     @log_with_stars("Centrality Analyzer")
     @log_time("Centrality Analyzer")
@@ -235,7 +235,8 @@ class RINProcess:
         ca.calculate_quantiles(use_parallel=use_parallel)
 
     @log_time("Quantile Analyzer")
-    def _process_quantile_centrality(self, high_percentage_dict=None, centrality_type=CentralityType.BET,
+    def _process_quantile_centrality(self, high_percentage_dict=None,
+                                     centrality_type: CentralityType = CentralityType.BET,
                                      destination_output_path=None) -> QuantileAnalyzer:
         """Process quantile calculations to find common residues with high centrality scores among the given PDBs"""
         qa = QuantileAnalyzer(high_percentage_dict=high_percentage_dict, centrality_type=centrality_type,
@@ -294,6 +295,31 @@ class RINProcess:
 
         return output_path_pdb_ids
 
+    @staticmethod
+    @log_with_stars("Process Summary")
+    def _print_summary(not_processed_pdb_ids, output_path, success_pdb_ids, total_amino_acids_map,
+                       total_start_time):
+        total_pdb_ids = len(success_pdb_ids) + len(not_processed_pdb_ids)
+        logging.info(
+            f"PDB processing summary: "
+            f"{len(success_pdb_ids)} out of {total_pdb_ids} PDB structures were successfully processed; "
+            f"{len(not_processed_pdb_ids)} structures were skipped because edge weights could not be constructed."
+        )
+        if not_processed_pdb_ids:
+            logging.info(
+                f"{len(not_processed_pdb_ids)} PDB structures were not processed: "
+                f"{', '.join(not_processed_pdb_ids)}"
+            )
+        logging.info(
+            f"Total PDBs: {len(total_amino_acids_map)}, Total amino acids: {sum(total_amino_acids_map.values())}")
+        total_end_time = datetime.strptime(datetime.now().strftime("%H:%M:%S"), "%H:%M:%S")
+        delta = total_end_time - total_start_time
+        total_seconds = int(delta.total_seconds())
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        logging.info(f"Total elapsed duration is {delta.total_seconds()} seconds ({hours}h {minutes}m {seconds}s).")
+        logging_config.save_logs(output_dir=output_path)
+
     def start_process(self) -> bool:
         # clear the debug.log file before starting the processes.
         logging_config.clear_logs()
@@ -308,24 +334,42 @@ class RINProcess:
         clos_high_percentage_dict = {}
         deg_high_percentage_dict = {}
         total_amino_acids_map = {}
-        pdb_ids = []
+        success_pdb_ids = []
+        not_processed_pdb_ids = []
 
         if output_path_pdb_ids:
             logging.info(f"Processing PDB files: {output_path_pdb_ids}")
             total_start_time = datetime.strptime(datetime.now().strftime("%H:%M:%S"), "%H:%M:%S")
             for pdb_file_path in output_path_pdb_ids:
                 pdb_name = Path(str(pdb_file_path)).stem
-                pdb_ids.append(pdb_name)
+
                 start_time = datetime.strptime(datetime.now().strftime("%H:%M:%S"), "%H:%M:%S")
 
                 log_util.log_star_message(pdb_name.upper())
                 logging.info(f'Start time: {start_time.time()}')
 
-                residue_network_builder = self._process_residue_network_builder(pdb_name=pdb_name,
-                                                                                pdb_path=pdb_file_path,
-                                                                                use_preprocess=True,
-                                                                                destination_output_path=output_path,
-                                                                                calculation_options=self.calculation_options)
+                residue_network_builder, is_success = self._process_residue_network_builder(pdb_name=pdb_name,
+                                                                                            pdb_path=pdb_file_path,
+                                                                                            use_preprocess=True,
+                                                                                            destination_output_path=output_path,
+                                                                                            calculation_options=self.calculation_options)
+
+                if not is_success:
+                    logging.info(
+                        f"{pdb_name}: No residue–residue interactions were detected "
+                        f"within the specified distance cutoff "
+                        f"(≤ {residue_network_builder.cutoff} Å). "
+                        f"Edge weights could not be constructed."
+                    )
+                    logging.warning(
+                        f"{pdb_name}: No residue–residue interactions were detected "
+                        f"within the specified distance cutoff "
+                        f"(≤ {residue_network_builder.cutoff} Å). "
+                        f"Edge weights could not be constructed."
+                    )
+
+                    not_processed_pdb_ids.append(pdb_name)
+                    continue
 
                 number_of_amino_acid = residue_network_builder.get_number_of_amino_acid()
                 total_amino_acids_map[pdb_name] = number_of_amino_acid
@@ -362,25 +406,17 @@ class RINProcess:
                 delta = end_time - start_time
                 logging.info(f"Elapsed duration for {pdb_name.upper()} is {delta.total_seconds()} seconds")
                 log_util.log_star_message(pdb_name.upper())
+                success_pdb_ids.append(pdb_name)
 
-            if len(output_path_pdb_ids) > 1:
+            if len(success_pdb_ids) > 1:
                 self._process_quantile_output(bet_high_percentage_dict=bet_high_percentage_dict,
                                               clos_high_percentage_dict=clos_high_percentage_dict,
                                               deg_high_percentage_dict=deg_high_percentage_dict,
                                               destination_output_path=output_path,
                                               calculation_options=self.calculation_options)
 
-            logging.info(
-                f"Total PDBs: {len(total_amino_acids_map)}, Total amino acids: {sum(total_amino_acids_map.values())}")
-
-            total_end_time = datetime.strptime(datetime.now().strftime("%H:%M:%S"), "%H:%M:%S")
-            delta = total_end_time - total_start_time
-            total_seconds = int(delta.total_seconds())
-            hours, remainder = divmod(total_seconds, 3600)
-            minutes, seconds = divmod(remainder, 60)
-
-            logging.info(f"Total elapsed duration is {delta.total_seconds()} seconds ({hours}h {minutes}m {seconds}s).")
-            logging_config.save_logs(output_dir=output_path)
+            self._print_summary(not_processed_pdb_ids, output_path, success_pdb_ids, total_amino_acids_map,
+                                total_start_time)
 
             return True
         else:

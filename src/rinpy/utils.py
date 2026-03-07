@@ -176,13 +176,21 @@ def write_centrality_scores_to_file(filename_path=None, score_dict=None, actual_
     with open(filename_path, 'w') as f:
         for key, value in score_dict.items():
             if actual_residue_number_map is not None:
-                chain_id, residue_number, insertion, residue_name = actual_residue_number_map[key]
+                residue_name, chain_id, residue_number, insertion, segment_id, record_name = actual_residue_number_map[
+                    key]
                 if insertion:
                     insertion_out = insertion
                 else:
                     insertion_out = "''"
-                line_formatter = "%d " + float_formatter + " %s %s %d %s\n"
-                f.write(line_formatter % (key, value, residue_name, chain_id, residue_number, insertion_out))
+
+                if segment_id:
+                    segment_id_out = segment_id
+                else:
+                    segment_id_out = "''"
+
+                line_formatter = "%d " + float_formatter + " %s %s %d %s %s\n"
+                f.write(line_formatter % (
+                    key, value, residue_name, chain_id, residue_number, insertion_out, segment_id_out))
             else:
                 line_formatter = "%d " + float_formatter + "\n"
                 f.write(line_formatter % (key, value))
@@ -207,7 +215,7 @@ def delete_folders_in_path(path):
 
 
 def get_df(output_file_path=None, columns: list = None, dtypes: dict = None,
-           sort_keys: list = None) -> pd.DataFrame:
+           sort_keys: list = None, sep: str = r"\s+") -> pd.DataFrame:
     """ Convert the given text file into a pandas dataframe and return it.
 
     Parameters:
@@ -237,7 +245,7 @@ def get_df(output_file_path=None, columns: list = None, dtypes: dict = None,
             f"The following columns are not present in the dtype dictionary: {', '.join(missing_columns)}")
 
     df = pd.read_csv(output_file_path,
-                     sep=r"\s+",
+                     sep=sep,
                      engine="python",
                      names=columns)
 
@@ -274,30 +282,37 @@ def get_ppdb(pdb_file_path):
 
 
 def get_residue_id(node):
-    res = str(node[RESIDUE_NUMBER])
-    ins = node.get(INSERTION, '')
-    return f"{res}{ins}" if ins not in [None, '', "''"] else res
+    res_num = str(node[RESIDUE_NUMBER])
+    ins_code = node.get(INSERTION, '')
+    return f"{res_num}{ins_code}" if ins_code not in ["", "''", None] else str(res_num)
 
 
 def get_residue_id_by_tuple(residue_tuple: tuple):
-    """ residue_tuple: tuple like ('A', 270, '', 'A') or ('A', 270, 'A', 'G')
-    returns: str like '270', '270A', '270B' etc.
+    """ residue_tuple: tuple like ('HIS','A', 270, '', 'A') or ('HIS','A', 270, 'A', 'G')
+    returns: str like '270', '270A', '270B,G' etc.
     """
-    res_num = residue_tuple[1]
-    ins_code = residue_tuple[2] if len(residue_tuple) > 2 else ''
-    if ins_code and ins_code not in ["", "''", None]:
-        return f"{res_num}{ins_code}"
-    else:
-        return str(res_num)
+    res_num = residue_tuple[2]
+    ins_code = residue_tuple[3]
+    seg_id = residue_tuple[4]
+
+    base = f"{res_num}{ins_code}" if ins_code not in ["", "''", None] else str(res_num)
+
+    if seg_id not in ["", "''", None]:
+        return f"{base}, {seg_id}"
+
+    return base
 
 
 def get_base_pdb_df(residue_to, destination_output_path, pdb_name):
-    base_pdb_df = convert_pdb_to_pandas_pdb(os.path.join(destination_output_path, pdb_name, f'{pdb_name}.pdb'))
+    base_pdb_df = convert_pdb_to_pandas_pdb(os.path.join(destination_output_path, pdb_name, f'{pdb_name}{PDB_EXT}'))
     atom_df = base_pdb_df.df[PdbRecord.ATOM.name]
     hetatm_df = base_pdb_df.df[PdbRecord.HETATM.name]
 
-    atom_keys = list(zip(atom_df[RESIDUE_NUMBER], atom_df[CHAIN_ID], atom_df[INSERTION]))
-    hetatm_keys = list(zip(hetatm_df[RESIDUE_NUMBER], hetatm_df[CHAIN_ID], hetatm_df[INSERTION]))
+    atom_keys = list(
+        zip(atom_df[RESIDUE_NAME], atom_df[CHAIN_ID], atom_df[RESIDUE_NUMBER], atom_df[INSERTION], atom_df[SEGMENT_ID]))
+    hetatm_keys = list(
+        zip(hetatm_df[RESIDUE_NAME], hetatm_df[CHAIN_ID], hetatm_df[RESIDUE_NUMBER], hetatm_df[INSERTION],
+            hetatm_df[SEGMENT_ID]))
 
     base_pdb_df.df[PdbRecord.ATOM.name][B_FACTOR] = [residue_to.get(key, 0.0) for key in atom_keys]
     base_pdb_df.df[PdbRecord.HETATM.name][B_FACTOR] = [residue_to.get(key, 0.0) for key in hetatm_keys]

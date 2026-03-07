@@ -15,9 +15,9 @@ from rinpy import utils
 from rinpy.constants import CENTRALITY_PDB_TEMPLATE, HIGH_PERCENTAGE_TEMPLATE, RESIDUE_NUMBER, VALUE, \
     CENTRALITY_CSV_TEMPLATE, RESIDUE_EDGES_FILE, RESIDUE_AVERAGE_COORDINATES_FILE, IS_CHECKED, \
     RESIDUE_NAME, CHAIN_ID, INSERTION, X_COORD, Z_COORD, Y_COORD, RESIDUE_INDEX, TOP_PERCENTAGE_TILE, SOURCE_RESIDUE, \
-    TARGET_RESIDUE, X, Y, Z, GRAPH_NAME, ATOM_NUMBER, CENTRALITY_SCORE
+    TARGET_RESIDUE, X, Y, Z, GRAPH_NAME, ATOM_NUMBER, CENTRALITY_SCORE, SEGMENT_ID, RECORD_NAME, HETATM, APO, HOLO
 from rinpy.graph_plotter import GraphPlotter
-from rinpy.log_util import log_details
+from rinpy.log_util import log_details, log_time
 from rinpy.pymol_utils import PymolUtils
 from rinpy.utils import CentralityType
 
@@ -73,11 +73,11 @@ class CentralityAnalyzer:
                     'value': 4.5
                 },
             }
-        actual_residue_number_map: dict, default: None
+        actual_residue_number_map: dict[int, tuple[str, str, int, str, str, str]], default: None
         """
 
-    def __init__(self, pdb_name, number_of_amino_acid, destination_output_path=None,
-                 calculation_options=None, actual_residue_number_map=None):
+    def __init__(self, pdb_name, number_of_amino_acid, destination_output_path=None, calculation_options=None,
+                 actual_residue_number_map: dict[int, tuple[str, str, int, str, str, str]] = None):
         if destination_output_path is None:
             raise ValueError('You must provide an output path to proceed.')
         self.pdb_name = pdb_name
@@ -128,9 +128,9 @@ class CentralityAnalyzer:
         log_detail_name = f'{centrality_type.display_name} - {self.pdb_name}'
         logging.info(f'Given quantile percentage for {log_detail_name} : {quantile_percentage}')
 
-        columns = [ATOM_NUMBER, CENTRALITY_SCORE, RESIDUE_NAME, CHAIN_ID, RESIDUE_NUMBER, INSERTION]
+        columns = [ATOM_NUMBER, CENTRALITY_SCORE, RESIDUE_NAME, CHAIN_ID, RESIDUE_NUMBER, INSERTION, SEGMENT_ID]
         dtypes = {ATOM_NUMBER: int, CENTRALITY_SCORE: float, RESIDUE_NAME: str, CHAIN_ID: str, RESIDUE_NUMBER: int,
-                  INSERTION: str}
+                  INSERTION: str, SEGMENT_ID: str}
         sort_keys = [ATOM_NUMBER]
 
         centrality_pdb_file_path = os.path.join(os.path.join(str(self.destination_output_path), self.pdb_name),
@@ -148,6 +148,7 @@ class CentralityAnalyzer:
         out_df = centrality_score_df[centrality_score_df[CENTRALITY_SCORE] >= threshold]
         out_path = os.path.join(self.destination_output_path, self.pdb_name, high_percentage_file)
         out_df.loc[:, INSERTION] = out_df[INSERTION].apply(lambda x: "''" if x == "" else x)
+        out_df.loc[:, SEGMENT_ID] = out_df[SEGMENT_ID].apply(lambda x: "''" if x == "" else x)
 
         out_df.to_csv(path_or_buf=out_path,
                       sep=';',
@@ -158,6 +159,7 @@ class CentralityAnalyzer:
 
         self._create_pymol_data(out_df=out_df, centrality_type=centrality_type)
 
+    @log_time("Centrality Analyzer - Create PyMol Data")
     def _create_pymol_data(self, out_df, centrality_type: CentralityType):
         """ Creates pymol query strings to be saved in a txt file for later use and also create pymol command to visualize
         residues with top quantile percentage centrality scores
@@ -172,9 +174,8 @@ class CentralityAnalyzer:
 
         original_pdb = f'{self.pdb_name}_original_{CENTRALITY_PDB_TEMPLATE.format(type=centrality_type.display_name)}'
 
-        residue_list = [f"{res_num}{ins}" if ins not in [None, '', "''"] else str(res_num)
-                        for res_num, ins in zip(out_df[RESIDUE_NUMBER], out_df[INSERTION])
-                        ]
+        residue_list = list(
+            zip(out_df[RESIDUE_NAME], out_df[CHAIN_ID], out_df[RESIDUE_NUMBER], out_df[INSERTION], out_df[SEGMENT_ID]))
 
         self.pymol_utils.export_pymol_script(
             full_path_to_pdb=os.path.join(self.destination_output_path, self.pdb_name, original_pdb),
@@ -267,7 +268,7 @@ class CentralityAnalyzer:
         return input_files
 
     @staticmethod
-    def _get_num_workers(input_files, log_msg):
+    def _get_num_workers(input_files: list, log_msg: str) -> int:
         cpu_count = mp.cpu_count()
         num_workers = min(cpu_count, len(input_files))
         logging.info(f"{log_msg} | "
@@ -324,7 +325,7 @@ class CentralityAnalyzer:
         """ returns true if the centrality type betweenness is checked"""
         return self.calculation_options[CentralityType.BET.display_name][IS_CHECKED]
 
-    def calculate_all_scores(self, use_parallel=True):
+    def calculate_all_scores(self, use_parallel: bool = True):
         """ Calculates the centrality scores for betweenness, closeness, and degree of the generated graph based on
         the local interaction strength.
 
@@ -375,7 +376,8 @@ class CentralityAnalyzer:
         return f"Centrality score calculation for {centrality_type_name}"
 
     @log_details(_centrality_message)
-    def _calculate_centrality_score(self, centrality_type=CentralityType.BET):
+    @log_time("Centrality Analyzer - Calculate Centrality Scores")
+    def _calculate_centrality_score(self, centrality_type: CentralityType = CentralityType.BET):
         r""" Calculate the centrality score for the given centrality type.
 
         Parameters:
@@ -469,7 +471,15 @@ class CentralityAnalyzer:
             self.graph_plotter.plot_histogram(scores_dict=dict(self.graph.degree()),
                                               centrality_type_name=CentralityType.DEG.display_name)
 
-    def build_network(self):
+    def _get_structure_state(self, attr_name: str = RECORD_NAME) -> str:
+        """ returns 'holo' if any node in the graph has record_name == 'HETATM', otherwise returns 'apo'. """
+        for _, attrs in self.graph.nodes(data=True):
+            if HETATM == attrs.get(attr_name):
+                return HOLO
+        return APO
+
+    @log_time("Centrality Analyzer - Build Network")
+    def build_network(self) -> nx.Graph:
         """ Builds a graph using networkx from contact and coordinate data.
 
         This method constructs a graph where each node represents a residue in a protein structure.
@@ -495,7 +505,7 @@ class CentralityAnalyzer:
         - If any residue is missing in `actual_residue_number_map`, it is skipped with a warning.
         - The contact data edges are weighted using the inverse of the interaction value from the contact dataframe.
         """
-        node_attrs = [X, Y, Z, CHAIN_ID, RESIDUE_NUMBER, INSERTION, RESIDUE_NAME]
+        node_attrs = [X, Y, Z, CHAIN_ID, RESIDUE_NUMBER, INSERTION, SEGMENT_ID, RESIDUE_NAME, RECORD_NAME]
         residue_edges_file_path = os.path.join(self.destination_output_path, self.pdb_name,
                                                f'{self.pdb_name}_{RESIDUE_EDGES_FILE}')
         residue_average_coords_file_path = os.path.join(self.destination_output_path, self.pdb_name,
@@ -532,11 +542,14 @@ class CentralityAnalyzer:
                 missing_residues += 1
                 continue
 
-            chain_id, residue_number, insertion, residue_name = self.actual_residue_number_map[residue_index]
+            residue_name, chain_id, residue_number, insertion, segment_id, record_name = self.actual_residue_number_map[
+                residue_index]
             attrs = {key: value for key, value in
-                     zip(node_attrs, [x_coord, y_coord, z_coord, chain_id, residue_number, insertion, residue_name])}
-
-            self.graph.add_node(residue_index, **attrs)
+                     zip(node_attrs,
+                         [x_coord, y_coord, z_coord, chain_id, residue_number, insertion, segment_id, residue_name,
+                          record_name])}
+            if residue_index not in self.graph:
+                self.graph.add_node(residue_index, **attrs)
 
         if missing_residues:
             logging.warning(f"Skipped {missing_residues} residues due to missing metadata.")
@@ -558,6 +571,9 @@ class CentralityAnalyzer:
         self.graph_plotter.plot_graph_3d(graph=self.graph,
                                          filename="graph_3D",
                                          title="Residue Interaction Network 3D")
+
+        nx.write_graphml(self.graph, os.path.join(self.destination_output_path, self.pdb_name,
+                                                  f'{self.pdb_name}_{self._get_structure_state()}_network.graphml'))
         return self.graph
 
 
