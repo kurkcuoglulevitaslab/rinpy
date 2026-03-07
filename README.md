@@ -19,8 +19,8 @@
 describes a protein as a network of nodes interconnected by weighted edges. In this network, each node represents a
 residue, nucleotide or a ligand at the average coordinate of its atomic coordinates. The edge weight between two nodes
 is defined by the local interaction strength between the two residues. The average coordinates of the residues and/or
-nucleotides are placed at the Cα atom or P atom, respectively, for the protein-RNA/DNA complexes. Each node is annotated
-with attributes such as Chain ID, Residue Number, Insertion Code, and its Cartesian coordinates.
+nucleotides are placed at the Cα atom or P atom, respectively, for protein-RNA/DNA complexes, such as the ribosome. Each node is annotated
+with attributes such as Chain ID, Residue Number, Insertion Code, Segment ID, and its Cartesian coordinates.
 
 ✨ Features
 -------------
