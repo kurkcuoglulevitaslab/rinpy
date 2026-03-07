@@ -11,7 +11,7 @@ include-package-data = true
 name = "rinpy"
 dynamic = ["version"]
 description = "Residue Interaction Network"
-#readme = "README.md"
+readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [
@@ -63,6 +63,7 @@ version = { attr = "rinpy.__version__" }
 
 [tool.setuptools.exclude-package-data]
 "rinpy" = [
-    "tests/*"
+    "tests/*",
+     "README.md"
 ]
 "*" = ["*.pyc", "*.pyo", "__pycache__/*"]
