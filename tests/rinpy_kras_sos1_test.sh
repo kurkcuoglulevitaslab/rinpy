@@ -9,4 +9,4 @@ else
   exit 1
 fi
 
-python rinpy_kras_test.py
+python rinpy_kras_sos1_test.py
