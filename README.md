@@ -22,21 +22,37 @@ is defined by the local interaction strength between the two residues. The avera
 nucleotides are placed at the Cα atom or P atom, respectively, for protein-RNA/DNA complexes, such as the ribosome. Each node is annotated
 with attributes such as Chain ID, Residue Number, Insertion Code, Segment ID, and its Cartesian coordinates.
 
+**RinPy** integrates ensemble-scale statistical evaluation of multiple input structures and 
+perturbation-aware comparative analysis within a unified graph-theoretical framework. 
+It enables systematic comparison between two states of a protein complex, 
+focusing on perturbation propagation, community structure composition, allosteric coupling, 
+and communication efficiency. **RinPy** provides two integrated core modules: **RIN Process** and **Network Comparator**.
+
 ✨ Features
 -------------
 
-- Converts protein complexes to residue interaction networks (RINs).
-- Supports weighted edges based on the local interaction strength or affinity.
-- Annotates nodes with Chain ID, Residue Number, Insertion Code, and Cartesian coordinates.
-- Scalable and reproducible pipeline for single structures, large PDB ensembles, and PDBs from a MD trajectory.
-- Cross-platform: compatible with Windows, macOS, and Linux.
-- Can be integrated with molecular visualization system such as PyMOL.
-- Centrality analysis (betweenness, closeness, and degree) to identify key residues.
-- Detects the residues with high centrality scores using a user-defined quantile percentage.
-- Frequency of common hub residues across PDB datasets.
-- Graph spectral analysis to identify hinge residues and dynamically connected domains.
-- Interactive 2D heatmap visualizations for each centrality metrics, residue frequencies, spectral domains and more.
-- Interactive 3D visualizations of graph spectral clustering for protein structures.
+### RIN Process 
+- Conversion of protein complexes and protein-RNA/DNA complexes, such as ribosome, into residue interaction networks (RINs).
+- Support for weighted edges based on local interaction strength or affinity.
+- Node annotation with Chain ID, Residue Number, Insertion Code, Segment ID, and Cartesian coordinates.
+- Scalable pipeline for single PDB structures, large PDB ensembles, and PDBs from an MD trajectory.
+- Cross-platform compatibility (Windows, macOS, Linux).
+- Export of analysis results in PyMOL-compatible formats (e.g., .pdb and .pml files) to enable direct visualization.
+- Centrality analysis (betweenness, closeness, degree).
+- Identification of high-centrality residues using user-defined quantile thresholds.
+- Frequency analysis of common hub residues across PDB structures within the given dataset.
+- Graph spectral analysis for detecting potential hinge residues and dynamically connected domains.
+- Interactive 2D heatmap visualizations for centrality metrics, residue frequency distributions, and graph spectral analysis results.
+- Interactive 3D visualizations of graph spectral analysis results mapped onto protein structures.
+### Network Comparator
+Given a source and a target network (e.g., apo vs. holo), **Network Comparator** supports:
+- Centrality comparison to quantify and visualize changes in degree, closeness, and betweenness centralities across the states.
+- Edge weight comparison to detect increased, decreased, unchanged, added, and removed residue interactions between the two states.
+- Community structure analysis to assess global domain organization and reordering of internal community under perturbation.
+- Graph signal processing to evaluate perturbation-driven shifts in eigenvalue.
+- Hub residue visualization to compare two states.
+- Communication path efficiency analysis, such as sequential path efficiency, efficiency of the path, and allosteric coupling between user-defined residue pairs on the shortest path to quantify changes.
+- Generation of comparative visual and tabular outputs, including 2D/3D network visualizations and structured CSV reports.
 
 🖥️ RinPy GUI
 --------------
@@ -47,11 +63,10 @@ To facilitate ease of use, the RinPy Graphical User Interface (GUI) was develope
 
 ### 📌 Prerequisites (Important)
 
-- **Python ≥ 3.10** is required.
+- **Python ≥ 3.10 and <3.14** are required.
 - RinPy depends on **NetworkX ≥ 3.4**, which requires Python 3.10 or newer.
 
-To ensure reliable management of the Python environment and scientific dependencies, we strongly recommend using *
-*Miniconda** or **Anaconda**.
+We strongly recommend using a Conda-based environment manager (**Miniconda** or **Anaconda**) to ensure stable dependency handling.
 
 - **Miniconda** (lightweight, recommended):  
   https://docs.conda.io/en/latest/miniconda.html
@@ -63,9 +78,9 @@ To ensure reliable management of the Python environment and scientific dependenc
 
 ### 🚀 Installation via PyPI (Recommended)
 
-RinPy is available on **PyPI** ([RinPy](https://pypi.org/project/rinpy/)) and can be installed directly using **pip**.
+RinPy is available on **PyPI** ([rinpy](https://pypi.org/project/rinpy/)) and can be installed directly using **pip**.
 
-The following steps demonstrate how to create and activate a conda virtual environment, install RinPy, verify the
+The following steps demonstrate how to create and activate a conda virtual environment, install **RinPy**, verify the
 installation, and run the program from the command line:
 
 ```bash
@@ -78,34 +93,71 @@ conda activate rinpy_env or source activate rinpy_env
 # Install RinPy
 pip install rinpy
 
+# (Optional) To upgrade to the latest version if RinPy is already installed
+pip install --upgrade rinpy
+
 # Check installation
 rinpy --help
-
-# Run RinPy
-python -m rinpy --input_path INPUT_PATH --output_path OUTPUT_PATH --calculation_option_file path/to/calculation_options.json
+```
+#### To run from Command Line for the RIN process:
+```bash
+python -m rinpy \
+      --input_path INPUT_PATH \
+      --output_path OUTPUT_PATH \
+      --calculation_option_file path/to/calculation_options.json
 
 or 
 
-rinpy --input_path INPUT_PATH --output_path OUTPUT_PATH --calculation_option_file path/to/calculation_options.json
+rinpy --input_path INPUT_PATH \
+      --output_path OUTPUT_PATH \
+      --calculation_option_file path/to/calculation_options.json
+```
+#### To run from Command Line for the Network Comparator:
+```bash
+python -m rinpy compare --source_input_path SOURCE_INPUT_PATH \
+      --target_input_path TARGET_INPUT_PATH \
+      --output_path OUTPUT_PATH \
+      --residue_pairs "A:10;A:144" \
+      --num_modes 20
 
+or
+
+rinpy compare --source_input_path SOURCE_INPUT_PATH \
+      --target_input_path TARGET_INPUT_PATH \
+      --output_path OUTPUT_PATH \
+      --residue_pairs "A:10;A:144" \
+      --num_modes 20
 ```
 
-#### Parameters from the terminal
+#### Parameter details for the terminal run for the RIN process:
 
-- `--input_path`: Input directory including PDB files
-- `--output_path`: Output directory
-- `--calculation_option_file`: JSON file containing parameters. To download,
+- `--input_path`: Directory containing the input PDB files.
+- `--output_path`:  Directory where results and output files are saved.
+- `--calculation_option_file`: JSON file containing configuration parameters. To download the example JSON file,
   click [calculation_options.json](./src/rinpy/calculation_options.json).
+
+#### Parameter details for the terminal run for the Network Comparator:
+
+- `--source_input_path`: Directory containing the output of the RIN process, such as apo or wild states.
+- `--target_input_path`: Directory containing the output of the RIN process, such as holo or mutant states.
+- `--output_path`: Directory where results and output files are saved.
+- `--residue_pairs`: Accepts a semicolon-separated list of residues in the
+  format `chain_id:residue_number[:insertion][:segment_id]`, where `insertion` and `segment_id` should be
+  provided only if available to ensure unique identification of the residue; otherwise, they may be omitted (e.g.,
+  `"A:10;A:144"` `"A:12;A:56"` or `"A:15:D:ABC;A:120:C:AB"`).
+- `--num_modes`: Number of non-zero Laplacian eigenvalues used in community structure analysis. The trivial zero
+  eigenvalue is excluded.
 
 ### 🔧 Installation from Source (Alternative)
 
-If you prefer to install RinPy from source, follow the steps below:
+If you prefer to install RinPy from source instead of using pip, follow the steps below:
 
 1. **Clone the repository:**
 
 Replace `<username>` with GitHub username:
 
 **Using HTTPS:**
+
 ```bash
 git clone https://github.com/<username>/rinpy.git
 ```
@@ -113,8 +165,7 @@ git clone https://github.com/<username>/rinpy.git
 ```bash
 git clone git@github.com:<username>/rinpy.git
 ```
-
-2. **Make scripts executable (macOS/Linux only):**
+2. **If required, make scripts executable (macOS/Linux only):**
 
 ```bash
 chmod -R +x rinpy
@@ -135,10 +186,10 @@ conda create -n rinpy_env python=3.10
 conda activate rinpy_env or source activate rinpy_env
 ```
 
-**Or using venv:**
+**Or using `venv` with a supported Python version (`3.10` ≤ Python < `3.14`):**
 
 ```bash
-python -m venv rinpy_env
+python3.10 -m venv rinpy_env
 
 # Activate the virtual environment
 # On Windows:
@@ -161,10 +212,14 @@ pip install .
 
 🚀 Usage
 ---------
-RinPy can be used programmatically via the **`RINProcess`** API within your Python scripts. Create a Python file
-named **`main.py`**, insert the content given below, and execute the script via the terminal (python **`main.py`**) or an equivalent environment.
 
-### Basic Example
+**RinPy** can also be used programmatically through the **RINProcess** and **NetworkComparator** APIs within your Python
+scripts. To perform comparative analysis, **RINProcess** must be executed first, as it generates the required input
+files for **NetworkComparator**, including centrality measures (betweenness, closeness, and degree) and the residue
+interaction network in **GraphML** format. Create a Python file named **`main.py`**, insert the content given below, and
+execute the script via the terminal (python **`main.py`**) or an equivalent environment.
+
+### RIN Process Example
 
 RinPy uses Python's **`multiprocessing`** module.
 
@@ -235,22 +290,55 @@ if __name__ == "__main__":
     main()
 ```
 
+### Network Comparator Example
+
+**Note:** To perform comparative analysis, **RINProcess** must be executed first.
+
+```python
+from rinpy import NetworkComparator
+
+# Each residue is defined as a tuple in the format (chain_id, residue_number, insertion, segment_id).
+# If insertion or segment ID is not available, use an empty string ''.
+# The residue pairs are a list of user-defined pairs. Each residue must be specified as 
+# (chain_id, residue_number, insertion, segment_id).
+
+comparator = NetworkComparator(
+    source_input_path=r"path to apo",
+    target_input_path=r"path to holo",
+    output_path=r"path to result folder",
+    residue_pairs=[(('A', 10, '', ''), ('A', 144, '', ''))],
+)
+
+# num_modes specifies the number of non-zero Laplacian eigenvalues used in community structure 
+# analysis.
+comparator.run(num_modes=20)
+```
+
 ---------------------------------------------------------
 
 📝 Notes
 ----------
-**RinPy** requires output_path and only one of the following: input_path, pdb_ids, or trajectory_file. Providing
-multiple
-inputs is not allowed; if more than one is given, input_path will take precedence. Input processing order: input_path →
-pdb_ids → trajectory_file.
+**RinPy** requires `--output_path`. In addition, exactly one of the following input options must be provided to **RINProcess**: 
+`--input_path`, `--pdb_ids`, or `--trajectory_file`. These arguments are mutually exclusive and cannot be
+used together. Argument details as follows:
 
-- **output_path**: Folder where processed RINs and results will be saved
-- **input_path**: Folder containing your input PDB files
-- **pdb_ids**: List of specific PDB IDs to process
-- **ligand_dict**: Optional dictionary with ligand information
-- **calculation_options**: JSON-like dictionary specifying which calculations to run and their parameters
-- **trajectory_file**: The MD trajectory file (pdb format) which contains multiple snaphots from MD.
-- **stride**: Default is **1**. This parameter is used in conjunction with trajectory_file parameter.
+- `--output_path`: Folder where processed RINs and results will be saved.
+- `--input_path`: Folder containing your input PDB files.
+- `--pdb_ids`: List of specific PDB IDs to process.
+- `--ligand_dict`: Optional dictionary with ligand information.
+- `--calculation_options**: JSON-like dictionary specifying which calculations to run and their parameters.
+- `--trajectory_file`: The MD trajectory file (pdb format) which contains multiple snaphots from MD.
+- `--stride`: Default is **1**. This parameter is used in conjunction with `--trajectory_file` parameter. It is
+  applicable only when a trajectory file is provided, and determines the interval at which frames are extracted, meaning
+  that PDB structures are generated every **stride** frames from the trajectory.
+
+For **NetworkComparator**, the following arguments are required:
+
+- `--source_input_path`: Directory containing the source-state RIN results (e.g., apo structure).
+- `--target_input_path`: Directory containing the target-state RIN results (e.g., ligand-bound structure).
+- `--output_path`: Directory where comparison results will be saved.
+- `--residue_pairs`: Optional residue pairs used for communication path efficiency analysis, including sequential path
+  efficiency, end-to-end efficiency, and allosteric coupling.
 
 ## 📊 Case Study of RinPy
 
