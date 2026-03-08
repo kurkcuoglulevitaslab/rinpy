@@ -214,10 +214,11 @@ pip install .
 ---------
 
 **RinPy** can also be used programmatically through the **RINProcess** and **NetworkComparator** APIs within your Python
-scripts. To perform comparative analysis, **RINProcess** must be executed first, as it generates the required input
-files for **NetworkComparator**, including centrality measures (betweenness, closeness, and degree) and the residue
-interaction network in **GraphML** format. Create a Python file named **`main.py`**, insert the content given below, and
-execute the script via the terminal (python **`main.py`**) or an equivalent environment.
+scripts. To perform comparative analysis, **RINProcess** must be executed first for all centrality types (betweenness,
+closeness, degree), as it generates the required input files for **NetworkComparator**, including centrality measures (
+betweenness, closeness, and degree) and the residue interaction network in **GraphML** format. Create a Python file
+named **`main.py`**, insert the content given below, and execute the script via the terminal (python **`main.py`**) or
+an equivalent environment.
 
 ### RIN Process Example
 
@@ -292,7 +293,8 @@ if __name__ == "__main__":
 
 ### Network Comparator Example
 
-**Note:** To perform comparative analysis, **RINProcess** must be executed first.
+**Note:** To perform comparative analysis, **RINProcess** must be executed first for all centrality types (betweenness,
+closeness, degree).
 
 ```python
 from rinpy import NetworkComparator
