@@ -10,9 +10,13 @@ import os
 from rinpy.constants import CHAIN_ID, RESIDUE_NUMBER, INSERTION, RESIDUE_NAME, SEGMENT_ID
 from rinpy.utils import CentralityType
 
+_PML = "pml"
+_RESIDUES = "residues"
+
 
 class PymolUtils:
-    def __init__(self, pdb_name, destination_output_path, actual_residue_number_map):
+    def __init__(self, pdb_name: str, destination_output_path: str,
+                 actual_residue_number_map: dict[int, tuple[str, str, int, str, str, str]]):
         self.pdb_name = pdb_name
         self.destination_output_path = destination_output_path
         self.actual_residue_number_map = actual_residue_number_map
@@ -24,21 +28,13 @@ class PymolUtils:
 
         full_path = self.get_full_save_path(filename=f'{centrality_type.display_name}_pymol_queries', extension="txt")
 
-        query_str_df = out_df.groupby(CHAIN_ID).apply(
-            lambda df: list(
-                zip(
-                    df[RESIDUE_NAME],
-                    df[CHAIN_ID],
-                    df[RESIDUE_NUMBER],
-                    df[INSERTION],
-                    df[SEGMENT_ID]
-                )
-            )).reset_index(name="residues")
+        query_str_df = (out_df.groupby(CHAIN_ID)[[RESIDUE_NAME, CHAIN_ID, RESIDUE_NUMBER, INSERTION, SEGMENT_ID]]
+                        .apply(lambda df: list(df.itertuples(index=False, name=None))).reset_index(name=_RESIDUES))
 
         query_strings = []
 
         for _, row in query_str_df.iterrows():
-            residues = row["residues"]
+            residues = row[_RESIDUES]
             formatted_residues = '+'.join(self.generate_selected_residues_by_tuple(residues))
             query = f"select {self.pdb_name} and {formatted_residues}"
             query_strings.append(query)
@@ -56,7 +52,7 @@ class PymolUtils:
         - residues: List of residue numbers (int)
         """
         if full_path is None:
-            full_path = self.get_full_save_path(filename=filename, extension="pml")
+            full_path = self.get_full_save_path(filename=filename, extension=_PML)
 
         with open(full_path, 'w') as file:
             file.write(f"load ./{os.path.basename(full_path_to_pdb)}\n")

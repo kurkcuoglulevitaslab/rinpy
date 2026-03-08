@@ -3,13 +3,18 @@
     __author__ = 'Zehra Sarica'
     __email__ = ['sarica16@itu.edu.tr','zehraacar559@gmail.com']
 """
-
 import logging
 import multiprocessing as mp
 import os
 
+import matplotlib
 import networkx as nx
 import numpy as np
+
+# Force non-interactive backend before any matplotlib import.
+# Prevents Tkinter RuntimeError in multiprocessing workers on Windows.
+if matplotlib.get_backend() != "Agg":
+    matplotlib.use("Agg")
 
 from rinpy import utils
 from rinpy.constants import CENTRALITY_PDB_TEMPLATE, HIGH_PERCENTAGE_TEMPLATE, RESIDUE_NUMBER, VALUE, \

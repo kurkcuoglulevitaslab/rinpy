@@ -7,6 +7,7 @@
 import argparse
 import glob
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 
@@ -320,6 +321,8 @@ class RINProcess:
         logging.info(f"Total elapsed duration is {delta.total_seconds()} seconds ({hours}h {minutes}m {seconds}s).")
         logging_config.save_logs(output_dir=output_path)
 
+    @log_with_stars("[RINProcess] Module")
+    @log_time("RIN Process")
     def start_process(self) -> bool:
         # clear the debug.log file before starting the processes.
         logging_config.clear_logs()

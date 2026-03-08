@@ -172,11 +172,11 @@ class NetworkComparator:
 
         self.common_node_keys, self.common_node_ids = self._build_common_residue_nodes(self.source_node_keys_to_id_map,
                                                                                        self.target_node_keys_to_id_map)
+        logging_config.clear_logs()
 
-    @log_with_stars("Network Comparator Analyzer")
+    @log_with_stars("[NetworkComparator] Module")
     @log_time("Network Comparator Analyzer")
     def run(self, num_modes: int = 20) -> None:
-        logging_config.clear_logs()
 
         self._process_quantify_changes(num_modes=num_modes)
 
@@ -184,6 +184,9 @@ class NetworkComparator:
 
         if self.residue_pairs:
             self._process_communication_path_efficiency()
+
+        logging.info(f'{"*" * 30} f"{"[NetworkComparator] Module".upper()} ENDS" {"*" * 30}')
+        logging_config.save_logs(output_dir=str(self.output_path))
 
     @log_with_stars("Communication Path Efficiency Analyzer")
     @log_time("Communication Path Efficiency Analyzer")
