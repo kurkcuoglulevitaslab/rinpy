@@ -326,7 +326,7 @@ used together. Argument details as follows:
 - `--input_path`: Folder containing your input PDB files.
 - `--pdb_ids`: List of specific PDB IDs to process.
 - `--ligand_dict`: Optional dictionary with ligand information.
-- `--calculation_options**: JSON-like dictionary specifying which calculations to run and their parameters.
+- `--calculation_options`: JSON-like dictionary specifying which calculations to run and their parameters.
 - `--trajectory_file`: The MD trajectory file (pdb format) which contains multiple snaphots from MD.
 - `--stride`: Default is **1**. This parameter is used in conjunction with `--trajectory_file` parameter. It is
   applicable only when a trajectory file is provided, and determines the interval at which frames are extracted, meaning
