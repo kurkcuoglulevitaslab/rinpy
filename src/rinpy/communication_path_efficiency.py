@@ -104,10 +104,12 @@ class CommunicationPathEfficiency:
         """
         for residue_pair in self.residue_pairs:
             source_results = self._compute_communication_path_efficiency(network=self.source_network,
-                                                                         residue_pair=residue_pair)
+                                                                         residue_pair=residue_pair,
+                                                                         pdb_name=self.source_pdb_name)
 
             target_results = self._compute_communication_path_efficiency(network=self.target_network,
-                                                                         residue_pair=residue_pair)
+                                                                         residue_pair=residue_pair,
+                                                                         pdb_name=self.target_pdb_name)
             if source_results is None or target_results is None:
                 continue
 
@@ -182,12 +184,12 @@ class CommunicationPathEfficiency:
         return node_map.get(key)
 
     def _save_shortest_path_residues(self, network: nx.Graph, shortest_path_nodes: list[int],
-                                     residue_pair: _RESIDUE_PAIR_TYPE):
+                                     residue_pair: _RESIDUE_PAIR_TYPE, pdb_name: str):
         """ save the shortest path residues into a txt file"""
         if not shortest_path_nodes:
             return
         save_name = self._residue_pair_name(residue_pair=residue_pair)
-        output_file = os.path.join(self.output_path, f"{save_name}_shortest_path_residues.txt")
+        output_file = os.path.join(self.output_path, f"{pdb_name}_{save_name}_shortest_path_residues.txt")
         with open(output_file, "w") as f:
             for node_id in shortest_path_nodes:
                 residue_name = network.nodes[node_id].get(RESIDUE_NAME, "")
@@ -199,7 +201,8 @@ class CommunicationPathEfficiency:
                 segment_id = segment_id if segment_id else "''"
                 f.write(f"{residue_name}, {chain_id}, {residue_number}, {insertion}, {segment_id}\n")
 
-    def _compute_communication_path_efficiency(self, network: nx.Graph, residue_pair: _RESIDUE_PAIR_TYPE) -> Optional[
+    def _compute_communication_path_efficiency(self, network: nx.Graph, residue_pair: _RESIDUE_PAIR_TYPE,
+                                               pdb_name: str | None) -> Optional[
         tuple[float, float, float]]:
         """ compute sequential efficiency of the network for the given residue pairs. """
         node_map = self.build_node_map(network)
@@ -217,7 +220,8 @@ class CommunicationPathEfficiency:
             return None
         try:
             path = nx.shortest_path(network, source_node, target_node, weight=_WEIGHT)
-            self._save_shortest_path_residues(network, path, residue_pair)
+            if pdb_name:
+                self._save_shortest_path_residues(network, path, residue_pair, pdb_name)
             k = len(path)
             edge_count = k - 1
 
@@ -274,8 +278,12 @@ class CommunicationPathEfficiency:
     def _compute_allosteric_coupling(self, source_network: nx.Graph, target_network: nx.Graph,
                                      residue_pair: _RESIDUE_PAIR_TYPE) -> dict[str, dict[str, float]]:
         """computes allosteric coupling metrics of the source and target network for the given pairs."""
-        source_seq, source_end, source_path = self._compute_communication_path_efficiency(source_network, residue_pair)
-        target_seq, target_end, target_path = self._compute_communication_path_efficiency(target_network, residue_pair)
+        source_seq, source_end, source_path = self._compute_communication_path_efficiency(network=source_network,
+                                                                                          residue_pair=residue_pair,
+                                                                                          pdb_name=None)
+        target_seq, target_end, target_path = self._compute_communication_path_efficiency(network=target_network,
+                                                                                          residue_pair=residue_pair,
+                                                                                          pdb_name=None)
 
         coupling_end_to_end = target_end - source_end
         coupling_path_restricted = target_path - source_path

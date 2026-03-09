@@ -155,7 +155,6 @@ class NetworkComparator:
         self.output_path.mkdir(parents=True, exist_ok=True)
 
         self.residue_pairs = residue_pairs or []
-        logging.info(f"Residue Pairs: {self.residue_pairs}")
 
         self.source_network = self._get_network(self._find_graphml(self.source_pdb_name, self.source_input_path))
         self.target_network = self._get_network(self._find_graphml(self.target_pdb_name, self.target_input_path))
@@ -178,6 +177,7 @@ class NetworkComparator:
     @log_with_stars("[NetworkComparator] Module")
     @log_time("Network Comparator Analyzer")
     def run(self, num_modes: int = 20) -> None:
+        logging.info(f"Residue Pairs: {self.residue_pairs}")
 
         self._process_quantify_changes(num_modes=num_modes)
 
