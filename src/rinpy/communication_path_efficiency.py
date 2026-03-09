@@ -12,7 +12,7 @@ from typing import Optional
 
 import networkx as nx
 
-from rinpy.constants import CHAIN_ID, SEGMENT_ID, INSERTION, RESIDUE_NUMBER
+from rinpy.constants import CHAIN_ID, SEGMENT_ID, INSERTION, RESIDUE_NUMBER, RESIDUE_NAME
 
 _WEIGHT = 'weight'
 _ALLOSTERIC_COUPLING_CSV = "allosteric_coupling.csv"
@@ -181,6 +181,24 @@ class CommunicationPathEfficiency:
         key = (str(chain_id), int(residue_number), str(insertion), str(segment_id))
         return node_map.get(key)
 
+    def _save_shortest_path_residues(self, network: nx.Graph, shortest_path_nodes: list[int],
+                                     residue_pair: _RESIDUE_PAIR_TYPE):
+        """ save the shortest path residues into a txt file"""
+        if not shortest_path_nodes:
+            return
+        save_name = self._residue_pair_name(residue_pair=residue_pair)
+        output_file = os.path.join(self.output_path, f"{save_name}_shortest_path_residues.txt")
+        with open(output_file, "w") as f:
+            for node_id in shortest_path_nodes:
+                residue_name = network.nodes[node_id].get(RESIDUE_NAME, "")
+                chain_id = network.nodes[node_id].get(CHAIN_ID, "")
+                residue_number = network.nodes[node_id].get(RESIDUE_NUMBER, "")
+                insertion = network.nodes[node_id].get(INSERTION, "")
+                segment_id = network.nodes[node_id].get(SEGMENT_ID, "")
+                insertion = insertion if insertion else "''"
+                segment_id = segment_id if segment_id else "''"
+                f.write(f"{residue_name}, {chain_id}, {residue_number}, {insertion}, {segment_id}\n")
+
     def _compute_communication_path_efficiency(self, network: nx.Graph, residue_pair: _RESIDUE_PAIR_TYPE) -> Optional[
         tuple[float, float, float]]:
         """ compute sequential efficiency of the network for the given residue pairs. """
@@ -199,6 +217,7 @@ class CommunicationPathEfficiency:
             return None
         try:
             path = nx.shortest_path(network, source_node, target_node, weight=_WEIGHT)
+            self._save_shortest_path_residues(network, path, residue_pair)
             k = len(path)
             edge_count = k - 1
 

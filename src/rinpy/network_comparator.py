@@ -155,6 +155,7 @@ class NetworkComparator:
         self.output_path.mkdir(parents=True, exist_ok=True)
 
         self.residue_pairs = residue_pairs or []
+        logging.info(f"Residue Pairs: {self.residue_pairs}")
 
         self.source_network = self._get_network(self._find_graphml(self.source_pdb_name, self.source_input_path))
         self.target_network = self._get_network(self._find_graphml(self.target_pdb_name, self.target_input_path))
