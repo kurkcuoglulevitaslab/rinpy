@@ -366,12 +366,13 @@ If you use this repository, please cite this study as follows:
 
 ```bibtex
 @article{rinpy,
-  title={RinPy, a Python Package for Residue Interaction Network Model to Analyze Protein Structures and Predict Ligand Binding Sites},
-  author={Sarica, Z.; Sungur, F. A.; Kurkcuoglu, O.},
-  journal={},
+  author = {Sarica, Zehra and Sungur, Fethiye Aylin and Kurkcuoglu, Ozge},
+  title = {RinPy, a Python Package for Residue Interaction Network Model to Analyze Protein Structures and Predict Ligand Binding Sites},
+  journal = {Journal of Chemical Information and Modeling},
   volume={},
-  year={},
-  publisher={}
+  year={2026},
+  publisher={},
+  doi = {10.1021/acs.jcim.6c00004}
 }
 ```
 
