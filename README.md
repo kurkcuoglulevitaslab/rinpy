@@ -15,7 +15,7 @@
 
 [![DOI](https://img.shields.io/badge/DOI-10.1021%2Facs.jcim.6c00004-blue)](https://pubs.acs.org/doi/10.1021/acs.jcim.6c00004)
 
-This repository contains the official implementation of the paper [*RinPy, a Python Package for Residue Interaction Network Model to Analyze Protein Structures and Predict Ligand Binding Sites*](https://pubs.acs.org/doi/10.1021/acs.jcim.6c00004).
+This repository contains the implementation of the paper [*RinPy, a Python Package for Residue Interaction Network Model to Analyze Protein Structures and Predict Ligand Binding Sites*](https://pubs.acs.org/doi/10.1021/acs.jcim.6c00004).
 
 📖 Description
 ------------
