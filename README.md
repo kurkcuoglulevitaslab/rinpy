@@ -13,6 +13,14 @@
   </table>
 </div>
 
+# RinPy – Residue Interaction Network for Protein Structures
+
+[![DOI](https://img.shields.io/badge/DOI-10.1021%2Facs.jcim.6c00004-blue)](https://pubs.acs.org/doi/10.1021/acs.jcim.6c00004)
+
+This repository contains the official implementation of the paper  
+[*RinPy: A Python Package for Residue Interaction Network Model to Analyze Protein Structures and Predict Ligand Binding Sites*](https://pubs.acs.org/doi/10.1021/acs.jcim.6c00004).
+---
+
 📖 Description
 ------------
 **RinPy**, a pip-installable Python package, is designed for constructing, visualizing, and analyzing Residue Interaction Networks (RINs). RIN
