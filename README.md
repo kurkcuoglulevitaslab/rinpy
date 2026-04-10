@@ -369,14 +369,13 @@ MIT License. See [LICENSE](LICENSE) file for details.
 If you use this repository, please cite this study as follows:
 
 ```bibtex
-@article{rinpy,
-  author = {Sarica, Zehra and Sungur, Fethiye Aylin and Kurkcuoglu, Ozge},
-  title = {RinPy, a Python Package for Residue Interaction Network Model to Analyze Protein Structures and Predict Ligand Binding Sites},
-  journal = {Journal of Chemical Information and Modeling},
-  volume={},
+@article{sarica2026rinpy,
+  title={RinPy, a Python Package for Residue Interaction Network Model to Analyze Protein Structures and Predict Ligand Binding Sites},
+  author={Sarica, Zehra and Sungur, Fethiye Aylin and Kurkcuoglu, Ozge},
+  journal={Journal of Chemical Information and Modeling},
   year={2026},
-  publisher={},
-  doi = {10.1021/acs.jcim.6c00004}
+  doi = {10.1021/acs.jcim.6c00004},
+  publisher={ACS Publications}
 }
 ```
 
