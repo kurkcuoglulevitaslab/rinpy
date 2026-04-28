@@ -344,7 +344,7 @@ For **NetworkComparator**, the following arguments are required:
 - `--target_input_path`: Directory containing the target-state RIN results (e.g., ligand-bound structure).
 - `--output_path`: Directory where comparison results will be saved.
 - `--residue_pairs`: Optional residue pairs used for communication path efficiency analysis, including sequential path
-  efficiency, end-to-end efficiency, and allosteric coupling.
+  efficiency, end-to-end efficiency, global efficiency and allosteric coupling.
 
 ## 📊 Case Study of RinPy
 
