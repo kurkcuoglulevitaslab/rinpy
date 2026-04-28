@@ -55,7 +55,7 @@ Given a source and a target network (e.g., apo vs. holo), **Network Comparator**
 - Community structure analysis to assess global domain organization and reordering of internal community under perturbation.
 - Graph signal processing to evaluate perturbation-driven shifts in eigenvalue.
 - Hub residue visualization to compare two states.
-- Communication path efficiency analysis, such as sequential path efficiency, efficiency of the path, and allosteric coupling between user-defined residue pairs on the shortest path to quantify changes.
+- Communication path efficiency analysis, such as sequential path efficiency, efficiency of the path, global efficiency and allosteric coupling between user-defined residue pairs on the shortest path to quantify changes.
 - Generation of comparative visual and tabular outputs, including 2D/3D network visualizations and structured CSV reports.
 
 🖥️ RinPy GUI
